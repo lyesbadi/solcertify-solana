@@ -1,0 +1,41 @@
+# Solana / Anchor
+.anchor
+.DS_Store
+target/
+deploy/
+test-ledger/
+*.log
+
+# Node.js / Frontend
+node_modules/
+.vite/
+dist/
+*.local
+
+# Solana CLI
+.config/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables
+.env
+.env.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Rust
+Cargo.lock
+**/*.rs.bk
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

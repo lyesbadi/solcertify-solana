@@ -1,0 +1,19 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+decentravote = "FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb"
+
+[programs.devnet]
+decentravote = "FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
