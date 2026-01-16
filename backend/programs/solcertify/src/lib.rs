@@ -1,43 +1,243 @@
 // SolCertify - Programme Principal
 //
 // Programme Anchor pour la certification d'authenticité de montres de luxe sur Solana.
-//
-// Fonctionnalités:
-// - Émettre des certificats d'authenticité pour montres de luxe
-// - Transférer la propriété des certificats
-// - Vérifier l'authenticité d'une montre
-// - Gérer les certificateurs agréés
-//
-// Architecture:
-// Le programme utilise des PDAs (Program Derived Addresses) pour stocker:
-// - L'autorité de certification (singleton)
-// - Les certificats individuels (par numéro de série)
-// - L'activité des utilisateurs (cooldown + compteur)
 
 use anchor_lang::prelude::*;
 
 // Déclaration des modules
-pub mod state;
 pub mod errors;
-pub mod instructions;
+mod processor;
+pub mod state;
+
+// Réexporter les types pour l'IDL
+pub use state::CertificationType;
 
 // ID du programme
 declare_id!("FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb");
 
 // Programme SolCertify
-//
-// Ce programme permet de:
-// - Certifier des montres de luxe via des certificateurs agréés
-// - Transférer la propriété avec contraintes temporelles
-// - Vérifier l'authenticité on-chain
-// - Respecter les limites (4 certificats max par utilisateur)
 #[program]
 pub mod solcertify {
-    // TODO: Les instructions seront implémentées dans la Phase 2
-    // - initialize: Initialise l'autorité de certification
-    // - add_certifier: Ajoute un certificateur agréé
-    // - remove_certifier: Retire un certificateur
-    // - issue_certificate: Émet un nouveau certificat
-    // - transfer_certificate: Transfère la propriété
-    // - verify_certificate: Vérifie l'authenticité
+    use super::*;
+
+    /// Initialise l'autorité de certification
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        processor::initialize::handler(ctx)
+    }
+
+    /// Ajoute un certificateur agréé
+    pub fn add_certifier(ctx: Context<AddCertifier>, certifier: Pubkey) -> Result<()> {
+        processor::add_certifier::handler(ctx, certifier)
+    }
+
+    /// Retire un certificateur de la liste des agréés
+    pub fn remove_certifier(ctx: Context<RemoveCertifier>, certifier: Pubkey) -> Result<()> {
+        processor::remove_certifier::handler(ctx, certifier)
+    }
+
+    /// Émet un nouveau certificat d'authenticité
+    pub fn issue_certificate(
+        ctx: Context<IssueCertificate>,
+        serial_number: String,
+        brand: String,
+        model: String,
+        cert_type: CertificationType,
+        estimated_value: u64,
+        metadata_uri: String,
+    ) -> Result<()> {
+        processor::issue_certificate::handler(
+            ctx,
+            serial_number,
+            brand,
+            model,
+            cert_type,
+            estimated_value,
+            metadata_uri,
+        )
+    }
+
+    /// Transfère la propriété d'un certificat
+    pub fn transfer_certificate(ctx: Context<TransferCertificate>) -> Result<()> {
+        processor::transfer_certificate::handler(ctx)
+    }
+
+    /// Vérifie l'authenticité d'un certificat
+    pub fn verify_certificate(ctx: Context<VerifyCertificate>) -> Result<CertificateInfo> {
+        processor::verify_certificate::handler(ctx)
+    }
+}
+
+// ==================== ACCOUNTS STRUCTS ====================
+
+use crate::errors::ErrorCode;
+use crate::state::{Certificate, CertificationAuthority, UserActivity};
+
+/// Structure retournée lors de la vérification d'un certificat
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct CertificateInfo {
+    pub serial_number: String,
+    pub brand: String,
+    pub model: String,
+    pub cert_type: u8,
+    pub estimated_value: u64,
+    pub owner: Pubkey,
+    pub certifier: Pubkey,
+    pub metadata_uri: String,
+    pub created_at: i64,
+    pub last_transfer_at: i64,
+    pub locked_until: i64,
+    pub is_locked: bool,
+    pub previous_owners_count: u8,
+    pub total_certificates_issued: u64,
+}
+
+// === Initialize ===
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        init,
+        payer = admin,
+        space = CertificationAuthority::SPACE,
+        seeds = [b"authority"],
+        bump
+    )]
+    pub authority: Account<'info, CertificationAuthority>,
+
+    /// CHECK: Ce compte est seulement utilisé pour recevoir des SOL
+    pub treasury: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// === AddCertifier ===
+#[derive(Accounts)]
+pub struct AddCertifier<'info> {
+    #[account(
+        mut,
+        constraint = admin.key() == authority.admin @ ErrorCode::UnauthorizedCertifier
+    )]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"authority"],
+        bump = authority.bump
+    )]
+    pub authority: Account<'info, CertificationAuthority>,
+}
+
+// === RemoveCertifier ===
+#[derive(Accounts)]
+pub struct RemoveCertifier<'info> {
+    #[account(
+        mut,
+        constraint = admin.key() == authority.admin @ ErrorCode::UnauthorizedCertifier
+    )]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"authority"],
+        bump = authority.bump
+    )]
+    pub authority: Account<'info, CertificationAuthority>,
+}
+
+// === IssueCertificate ===
+#[derive(Accounts)]
+#[instruction(serial_number: String)]
+pub struct IssueCertificate<'info> {
+    #[account(mut)]
+    pub certifier: Signer<'info>,
+
+    /// CHECK: Ce compte est seulement utilisé comme référence pour le propriétaire
+    pub owner: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"authority"],
+        bump = authority.bump
+    )]
+    pub authority: Account<'info, CertificationAuthority>,
+
+    #[account(
+        init,
+        payer = certifier,
+        space = Certificate::SPACE,
+        seeds = [b"certificate", serial_number.as_bytes()],
+        bump
+    )]
+    pub certificate: Account<'info, Certificate>,
+
+    #[account(
+        init_if_needed,
+        payer = certifier,
+        space = UserActivity::SPACE,
+        seeds = [b"user_activity", owner.key().as_ref()],
+        bump
+    )]
+    pub owner_activity: Account<'info, UserActivity>,
+
+    /// CHECK: Vérifié par la contrainte sur authority.treasury
+    #[account(
+        mut,
+        constraint = treasury.key() == authority.treasury @ ErrorCode::UnauthorizedCertifier
+    )]
+    pub treasury: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// === TransferCertificate ===
+#[derive(Accounts)]
+pub struct TransferCertificate<'info> {
+    #[account(mut)]
+    pub from: Signer<'info>,
+
+    /// CHECK: Ce compte est seulement utilisé comme référence
+    pub to: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"certificate", certificate.serial_number.as_bytes()],
+        bump = certificate.bump
+    )]
+    pub certificate: Account<'info, Certificate>,
+
+    #[account(
+        mut,
+        seeds = [b"user_activity", from.key().as_ref()],
+        bump = from_activity.bump
+    )]
+    pub from_activity: Account<'info, UserActivity>,
+
+    #[account(
+        init_if_needed,
+        payer = from,
+        space = UserActivity::SPACE,
+        seeds = [b"user_activity", to.key().as_ref()],
+        bump
+    )]
+    pub to_activity: Account<'info, UserActivity>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// === VerifyCertificate ===
+#[derive(Accounts)]
+pub struct VerifyCertificate<'info> {
+    #[account(
+        seeds = [b"certificate", certificate.serial_number.as_bytes()],
+        bump = certificate.bump
+    )]
+    pub certificate: Account<'info, Certificate>,
+
+    #[account(
+        seeds = [b"authority"],
+        bump = authority.bump
+    )]
+    pub authority: Account<'info, CertificationAuthority>,
 }

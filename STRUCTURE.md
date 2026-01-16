@@ -20,6 +20,7 @@ solcertify-solana/
 **Technologies**: Rust, Anchor Framework, Solana
 
 **Contient**:
+
 - `programs/solcertify/src/` - Code du smart contract
   - `lib.rs` - Point d'entrée du programme
   - `state/` - Structures de données on-chain
@@ -30,6 +31,7 @@ solcertify-solana/
 - `Cargo.toml` - Configuration Rust/Cargo
 
 **Commandes**:
+
 ```bash
 cd backend
 anchor build    # Compiler
@@ -38,6 +40,7 @@ anchor deploy   # Déployer
 ```
 
 **Fichiers générés**:
+
 - `target/deploy/solcertify.so` - Programme compilé
 - `target/idl/solcertify.json` - IDL pour le frontend
 
@@ -48,6 +51,7 @@ anchor deploy   # Déployer
 **Technologies**: React 18, TypeScript, Vite, TailwindCSS
 
 **Contient**:
+
 - `src/` - Code source React
   - `components/` - Composants UI
   - `hooks/` - Custom hooks
@@ -55,6 +59,7 @@ anchor deploy   # Déployer
 - `package.json` - Dépendances npm
 
 **Commandes**:
+
 ```bash
 cd frontend
 npm install     # Installer
@@ -63,6 +68,7 @@ npm run build   # Production
 ```
 
 **Variables d'environnement** (`.env.local`):
+
 - `VITE_SOLANA_RPC_URL` - URL du RPC Solana
 - `VITE_PROGRAM_ID` - ID du programme
 - `VITE_IPFS_API_URL` - URL du service IPFS
@@ -74,10 +80,12 @@ npm run build   # Production
 **Technologies**: Node.js, Express, Pinata SDK
 
 **Contient**:
+
 - `server.js` - Serveur Express
 - `package.json` - Dépendances npm
 
 **Commandes**:
+
 ```bash
 cd ipfs-service
 npm install     # Installer
@@ -85,11 +93,13 @@ npm start       # Démarrer
 ```
 
 **Variables d'environnement** (`.env`):
+
 - `PINATA_API_KEY` - Clé API Pinata
 - `PINATA_SECRET_KEY` - Clé secrète Pinata
 - `PORT` - Port du serveur (3001)
 
 **Endpoints**:
+
 - `POST /api/upload/image` - Upload d'image
 - `POST /api/metadata/create` - Création de métadonnées
 
@@ -98,12 +108,14 @@ npm start       # Démarrer
 **Localisation**: `./docker/`
 
 **Fichiers**:
+
 - `Dockerfile.backend` - Image pour le backend Solana
 - `Dockerfile.frontend` - Image pour l'app React
 - `Dockerfile.ipfs` - Image pour le service IPFS
 - `docker-compose.yml` - Orchestration des services
 
 **Commandes**:
+
 ```bash
 # Démarrer tous les services
 docker-compose up -d
@@ -116,6 +128,7 @@ docker-compose down
 ```
 
 **Services exposés**:
+
 - Backend: `localhost:8899` (RPC Solana)
 - Frontend: `localhost:5173` (Vite)
 - IPFS: `localhost:3001` (API)
@@ -123,6 +136,7 @@ docker-compose down
 ## Documentation
 
 **À la racine**:
+
 - `README.md` - Documentation principale
 - `CLAUDE.md` - Instructions de développement (privé)
 - `SPECIFICATION.md` - Spécifications complètes (privé)
@@ -131,6 +145,7 @@ docker-compose down
 - `.env.example` - Template des variables d'environnement
 
 **Par service**:
+
 - `backend/README.md` - Documentation backend
 - `frontend/README.md` - Documentation frontend
 - `ipfs-service/README.md` - Documentation IPFS
