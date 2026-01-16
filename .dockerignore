@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+app/node_modules/
+
+# Build artifacts
+target/
+deploy/
+.anchor/
+dist/
+.vite/
+
+# Ledger data
+test-ledger/
+.config/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~

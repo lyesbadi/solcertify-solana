@@ -26,6 +26,12 @@ dist/
 .env
 .env.local
 
+# Private documentation (not to be committed)
+CLAUDE.md
+SPECIFICATION.md
+PHASES.md
+DOCKER.md
+
 # OS
 Thumbs.db
 .DS_Store
