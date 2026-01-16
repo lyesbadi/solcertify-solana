@@ -1,0 +1,25 @@
+# Dockerfile pour le frontend React
+FROM node:20-slim
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Créer le répertoire de l'application
+WORKDIR /app
+
+# Copier les fichiers package
+COPY package*.json ./
+
+# Installer les dépendances
+RUN npm install
+
+# Copier le reste de l'application
+COPY . .
+
+# Exposer le port Vite
+EXPOSE 5173
+
+# Démarrer le serveur de développement
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

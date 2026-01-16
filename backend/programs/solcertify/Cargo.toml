@@ -1,0 +1,23 @@
+[package]
+name = "solcertify"
+version = "0.1.0"
+description = "Certification d'authenticité pour montres de luxe sur Solana"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "solcertify"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.30.1"
+
+[lints.rust]
+unexpected_cfgs = "allow"

@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Solana Validator + Backend
+  solana-backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: solcertify-backend
+    ports:
+      - "8899:8899"   # Solana RPC
+      - "8900:8900"   # Solana WebSocket
+      - "9900:9900"   # Solana faucet
+    volumes:
+      - ./backend/programs:/app/programs
+      - ./backend/tests:/app/tests
+      - ./backend/Anchor.toml:/app/Anchor.toml
+      - ./backend/Cargo.toml:/app/Cargo.toml
+      - solana-ledger:/root/.config/solana
+    environment:
+      - RUST_LOG=info
+    networks:
+      - solcertify-network
+    healthcheck:
+      test: ["CMD", "solana", "cluster-version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: solcertify-frontend
+    ports:
+      - "5173:5173"  # Vite dev server
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      - VITE_SOLANA_RPC_URL=http://solana-backend:8899
+      - VITE_IPFS_API_URL=http://ipfs-service:3001
+    networks:
+      - solcertify-network
+    depends_on:
+      solana-backend:
+        condition: service_healthy
+      ipfs-service:
+        condition: service_started
+
+  # Service IPFS (Node.js + Pinata)
+  ipfs-service:
+    build:
+      context: ./ipfs-service
+      dockerfile: ../docker/Dockerfile.ipfs
+    container_name: solcertify-ipfs-service
+    ports:
+      - "3001:3001"  # API IPFS
+    volumes:
+      - ./ipfs-service:/app
+    environment:
+      - PINATA_API_KEY=${PINATA_API_KEY}
+      - PINATA_SECRET_KEY=${PINATA_SECRET_KEY}
+    networks:
+      - solcertify-network
+
+volumes:
+  solana-ledger:
+
+networks:
+  solcertify-network:
+    driver: bridge

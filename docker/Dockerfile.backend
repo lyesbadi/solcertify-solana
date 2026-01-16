@@ -1,0 +1,47 @@
+# Dockerfile pour le backend Solana
+FROM rust:1.75-slim
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    libudev-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer Solana CLI
+RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.4/install)"
+ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
+
+# Installer Anchor CLI
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
+
+# Créer le répertoire de l'application
+WORKDIR /app
+
+# Copier les fichiers du projet
+COPY Cargo.toml ./
+COPY Anchor.toml ./
+COPY programs ./programs
+COPY tests ./tests
+COPY package.json package-lock.json tsconfig.json ./
+
+# Installer les dépendances Node.js pour les tests
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install
+
+# Configurer Solana pour localhost
+RUN solana config set --url localhost && \
+    solana-keygen new --no-bip39-passphrase -o /root/.config/solana/id.json
+
+# Exposer les ports
+EXPOSE 8899 8900 9900
+
+# Script de démarrage
+COPY docker/start-backend.sh /start-backend.sh
+RUN chmod +x /start-backend.sh
+
+CMD ["/start-backend.sh"]
