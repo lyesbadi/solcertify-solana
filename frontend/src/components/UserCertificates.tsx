@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSolCertify } from '../hooks/useSolCertify';
 import { Watch, Calendar, Lock, History, ExternalLink } from 'lucide-react';
+import { clsx } from 'clsx';
 
 export const UserCertificates = () => {
     const { program, wallet } = useSolCertify();
@@ -11,32 +12,9 @@ export const UserCertificates = () => {
         async function fetchUserCerts() {
             if (!program || !wallet) return;
             try {
-                // Fetch certificates where owner is the current wallet
-                const certs = await program.account.certificate.all([
-                    {
-                        memcmp: {
-                            offset: 8 + 4 + 50 + 4 + 30 + 4 + 50 + 1 + 8, // serial(string) + brand(string) + model(string) + type(enum) + value(u64)
-                            // Wait, let's check the account layout in IDL
-                            // Certificate fields:
-                            // serialNumber: string (4 + max_len)
-                            // brand: string (4 + max_len)
-                            // model: string (4 + max_len)
-                            // certType: enum (1)
-                            // estimatedValue: u64 (8)
-                            // metadataUri: string (4 + max_len)
-                            // owner: pubkey (32)
-                            // ...
-                            // Memcmp is tricky with strings. Better fetch all and filter or use clever offset.
-                            bytes: wallet.publicKey.toBase58(),
-                        }
-                    }
-                ]);
-
-                // Simpler way for now: fetch all and filter in JS if memory allows, 
-                // but for a real app, offset is better.
-                // Let's use the .all() without complex memcmp for the demo or fix the offset.
-                const allCerts = await program.account.certificate.all();
-                const userCerts = allCerts.filter(c => c.account.owner.equals(wallet.publicKey));
+                // Fetch all certificates and filter for owner
+                const allCerts = await (program.account as any).certificate.all();
+                const userCerts = allCerts.filter((c: any) => c.account.owner.equals(wallet.publicKey));
 
                 setCertificates(userCerts);
             } catch (error) {

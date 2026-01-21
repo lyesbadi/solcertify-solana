@@ -19,7 +19,7 @@ export const VerifyWatch = () => {
 
         try {
             const [pda] = getCertificatePda(serial);
-            const certificate = await program.account.certificate.fetch(pda);
+            const certificate = await (program.account as any).certificate.fetch(pda);
             setResult(certificate);
         } catch (err: any) {
             console.error("Verification error:", err);

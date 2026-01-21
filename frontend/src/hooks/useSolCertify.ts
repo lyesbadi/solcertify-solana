@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { AnchorProvider, Program, Idl } from '@coral-xyz/anchor';
 import { useAnchorWallet, useConnection } from '@solana/wallet-adapter-react';
 import idl from '../idl/solcertify.json';
@@ -24,21 +24,21 @@ export function useSolCertify() {
         return PublicKey.findProgramAddressSync(
             [Buffer.from("auth_v5")],
             PROGRAM_ID
-        )[0];
+        );
     };
 
     const getCertificatePda = (serialNumber: string) => {
         return PublicKey.findProgramAddressSync(
             [Buffer.from("certificate"), Buffer.from(serialNumber)],
             PROGRAM_ID
-        )[0];
+        );
     };
 
     const getUserActivityPda = (user: PublicKey) => {
         return PublicKey.findProgramAddressSync(
             [Buffer.from("user_activity"), user.toBuffer()],
             PROGRAM_ID
-        )[0];
+        );
     };
 
     return {
