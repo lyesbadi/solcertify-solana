@@ -1,6 +1,6 @@
 // Contraintes temporelles
-pub const COOLDOWN_PERIOD: i64 = 5 * 60; // 5 minutes en secondes
-pub const LOCK_PERIOD: i64 = 10 * 60; // 10 minutes en secondes
+pub const COOLDOWN_PERIOD: i64 = 1; // 1 seconde pour le test
+pub const LOCK_PERIOD: i64 = 20; // 20 secondes pour le test
 
 // Limites de possession
 pub const MAX_CERTIFICATES: u8 = 4; // Maximum 4 certificats par utilisateur
