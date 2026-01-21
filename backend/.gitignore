@@ -2,3 +2,7 @@
 .env
 tests_js/
 tests/keypairs/
+
+target/
+
+target/
