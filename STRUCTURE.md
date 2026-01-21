@@ -6,7 +6,7 @@ Ce document explique l'organisation du projet après la restructuration.
 
 Le projet est organisé en 3 services indépendants:
 
-```
+```text
 solcertify-solana/
 ├── backend/           # Smart contract Solana (Rust/Anchor)
 ├── frontend/          # Application React (TypeScript)
@@ -24,7 +24,7 @@ solcertify-solana/
 - `programs/solcertify/src/` - Code du smart contract
   - `lib.rs` - Point d'entrée du programme
   - `state/` - Structures de données on-chain
-  - `instructions/` - Logique métier (Phase 2)
+  - `processor/` - Logique métier (Instructions)
   - `errors/` - Codes d'erreur personnalisés
 - `tests/` - Tests unitaires en TypeScript
 - `Anchor.toml` - Configuration Anchor
@@ -34,7 +34,8 @@ solcertify-solana/
 
 ```bash
 cd backend
-anchor build    # Compiler
+cargo build-sbf # Compiler (Recommandé pour compatibilité)
+anchor build    # Compiler (Alternative)
 anchor test     # Tester
 anchor deploy   # Déployer
 ```
@@ -168,4 +169,6 @@ docker-compose down
 ## Phase actuelle
 
 ✅ Phase 1: Restructuration complète
-⏳ Phase 2: Implémentation des instructions du smart contract
+✅ Phase 2: Implémentation du smart contract
+✅ Phase 3: Finalisation Backend & Tests complets (100% Passing)
+⏳ Phase 4: Frontend
