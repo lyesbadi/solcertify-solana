@@ -80,4 +80,4 @@ Crée et upload des métadonnées JSON
 
 ## Phase actuelle
 
-Phase 4 ⏳ - À implémenter après les smart contracts
+Phase 4  - À implémenter après les smart contracts

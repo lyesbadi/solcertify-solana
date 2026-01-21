@@ -168,7 +168,7 @@ docker-compose down
 
 ## Phase actuelle
 
-✅ Phase 1: Restructuration complète
-✅ Phase 2: Implémentation du smart contract
-✅ Phase 3: Finalisation Backend & Tests complets (100% Passing)
-⏳ Phase 4: Frontend
+ Phase 1: Restructuration complète
+ Phase 2: Implémentation du smart contract
+ Phase 3: Finalisation Backend & Tests complets (100% Passing)
+ Phase 4: Frontend

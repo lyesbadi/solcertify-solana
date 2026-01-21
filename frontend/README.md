@@ -53,4 +53,4 @@ VITE_IPFS_API_URL=http://localhost:3001
 
 ## Phase actuelle
 
-Phase 5 ⏳ - Développement du frontend (à la fin du projet)
+Phase 5  - Développement du frontend (à la fin du projet)
