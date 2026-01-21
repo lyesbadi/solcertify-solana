@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-solcertify = "FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb"
+solcertify = "FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee"
 
 [programs.devnet]
-solcertify = "FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb"
+solcertify = "FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee"
 
 [registry]
 url = "https://api.apr.dev"

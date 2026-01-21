@@ -13,7 +13,7 @@ pub mod state;
 pub use state::CertificationType;
 
 // ID du programme
-declare_id!("FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb");
+declare_id!("FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee");
 
 // Programme SolCertify
 #[program]
@@ -22,6 +22,7 @@ pub mod solcertify {
 
     /// Initialise l'autorité de certification
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        msg!("DEBUG: INITIALIZE V2 CALLED - CODE IS LIVE");
         processor::initialize::handler(ctx)
     }
 
@@ -101,7 +102,7 @@ pub struct Initialize<'info> {
         init,
         payer = admin,
         space = CertificationAuthority::SPACE,
-        seeds = [b"authority"],
+        seeds = [b"auth_v5"],
         bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
@@ -123,7 +124,7 @@ pub struct AddCertifier<'info> {
 
     #[account(
         mut,
-        seeds = [b"authority"],
+        seeds = [b"auth_v5"],
         bump = authority.bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
@@ -140,7 +141,7 @@ pub struct RemoveCertifier<'info> {
 
     #[account(
         mut,
-        seeds = [b"authority"],
+        seeds = [b"auth_v5"],
         bump = authority.bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
@@ -158,7 +159,7 @@ pub struct IssueCertificate<'info> {
 
     #[account(
         mut,
-        seeds = [b"authority"],
+        seeds = [b"auth_v5"],
         bump = authority.bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
@@ -236,7 +237,7 @@ pub struct VerifyCertificate<'info> {
     pub certificate: Account<'info, Certificate>,
 
     #[account(
-        seeds = [b"authority"],
+        seeds = [b"auth_v5"],
         bump = authority.bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
