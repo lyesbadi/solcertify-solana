@@ -4,7 +4,7 @@ Plateforme de certification d'authenticité pour montres de luxe sur la blockcha
 
 ## Structure du projet
 
-```
+```text
 solcertify-solana/
 ├── backend/                    # Smart contracts Solana (Rust/Anchor)
 │   ├── programs/solcertify/   # Code du programme
@@ -50,11 +50,13 @@ solcertify-solana/
 
 ### Backend (Solana)
 
-```bash
-cd backend
-anchor build
-anchor test
-```
+> **Note Importante** : Voir `backend/README.md` pour les instructions détaillées de compilation (Workaround Windows) et le setup des tests (.env).
+
+ ```bash
+ cd backend
+ cargo build-sbf  # Ou anchor build (voir docs)
+ anchor test      # Avec setup spécifique (voir docs)
+ ```
 
 ### Frontend (React)
 
