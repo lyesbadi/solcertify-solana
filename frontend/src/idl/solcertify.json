@@ -296,6 +296,205 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "requestCertification",
+      "discriminator": [
+        46,
+        128,
+        197,
+        242,
+        175,
+        38,
+        9,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "serialNumber",
+          "type": "string"
+        },
+        {
+          "name": "brand",
+          "type": "string"
+        },
+        {
+          "name": "model",
+          "type": "string"
+        },
+        {
+          "name": "certType",
+          "type": {
+            "defined": {
+              "name": "CertificationType"
+            }
+          }
+        },
+        {
+          "name": "estimatedValue",
+          "type": "u64"
+        },
+        {
+          "name": "metadataUri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "approveCertification",
+      "discriminator": [
+        212,
+        208,
+        101,
+        97,
+        229,
+        54,
+        70,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "certifier",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "certificate",
+          "writable": true
+        },
+        {
+          "name": "ownerActivity",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "rejectCertification",
+      "discriminator": [
+        154,
+        136,
+        114,
+        101,
+        200,
+        14,
+        125,
+        75
+      ],
+      "accounts": [
+        {
+          "name": "certifier",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "requester",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -337,18 +536,31 @@
         179,
         37
       ]
+    },
+    {
+      "name": "CertificationRequest",
+      "discriminator": [
+        235,
+        99,
+        166,
+        69,
+        173,
+        176,
+        212,
+        50
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
       "name": "UnauthorizedCertifier",
-      "msg": "Le certificateur n'est pas agréé"
+      "msg": "Le certificateur n'est pas agree"
     },
     {
       "code": 6001,
       "name": "SerialNumberAlreadyExists",
-      "msg": "Ce numéro de série existe déjà"
+      "msg": "Ce numero de serie existe deja"
     },
     {
       "code": 6002,
@@ -358,27 +570,27 @@
     {
       "code": 6003,
       "name": "CooldownNotElapsed",
-      "msg": "Cooldown de 5 minutes non écoulé"
+      "msg": "Cooldown de 5 minutes non ecoule"
     },
     {
       "code": 6004,
       "name": "CertificateLocked",
-      "msg": "Certificat verrouillé pendant 10 minutes"
+      "msg": "Certificat verrouille pendant 10 minutes"
     },
     {
       "code": 6005,
       "name": "NotOwner",
-      "msg": "Vous n'êtes pas le propriétaire"
+      "msg": "Vous n'etes pas le proprietaire"
     },
     {
       "code": 6006,
       "name": "CertifierAlreadyExists",
-      "msg": "Le certificateur existe déjà"
+      "msg": "Le certificateur existe deja"
     },
     {
       "code": 6007,
       "name": "CertifierNotFound",
-      "msg": "Certificateur non trouvé"
+      "msg": "Certificateur non trouve"
     },
     {
       "code": 6008,
@@ -388,12 +600,47 @@
     {
       "code": 6009,
       "name": "StringTooLong",
-      "msg": "Chaîne trop longue"
+      "msg": "Chaine trop longue"
     },
     {
       "code": 6010,
       "name": "InsufficientPayment",
       "msg": "Paiement insuffisant"
+    },
+    {
+      "code": 6011,
+      "name": "RequestNotPending",
+      "msg": "La demande n'est pas en attente"
+    },
+    {
+      "code": 6012,
+      "name": "SerialNumberTooLong",
+      "msg": "Numero de serie trop long"
+    },
+    {
+      "code": 6013,
+      "name": "BrandTooLong",
+      "msg": "Marque trop longue"
+    },
+    {
+      "code": 6014,
+      "name": "ModelTooLong",
+      "msg": "Modele trop long"
+    },
+    {
+      "code": 6015,
+      "name": "MetadataUriTooLong",
+      "msg": "URI metadonnees trop longue"
+    },
+    {
+      "code": 6016,
+      "name": "RejectionReasonTooLong",
+      "msg": "Raison du rejet trop longue"
+    },
+    {
+      "code": 6017,
+      "name": "RequestAlreadyExists",
+      "msg": "Une demande existe deja"
     }
   ],
   "types": [
@@ -413,6 +660,23 @@
           },
           {
             "name": "Exceptional"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Approved"
+          },
+          {
+            "name": "Rejected"
           }
         ]
       }
@@ -545,6 +809,80 @@
           {
             "name": "certificateCount",
             "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CertificationRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "serialNumber",
+            "type": "string"
+          },
+          {
+            "name": "brand",
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "type": "string"
+          },
+          {
+            "name": "certType",
+            "type": {
+              "defined": {
+                "name": "CertificationType"
+              }
+            }
+          },
+          {
+            "name": "estimatedValue",
+            "type": "u64"
+          },
+          {
+            "name": "metadataUri",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "RequestStatus"
+              }
+            }
+          },
+          {
+            "name": "assignedCertifier",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "rejectionReason",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "resolvedAt",
+            "type": "i64"
+          },
+          {
+            "name": "feePaid",
+            "type": "u64"
           },
           {
             "name": "bump",
