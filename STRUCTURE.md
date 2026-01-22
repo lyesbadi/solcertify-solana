@@ -10,22 +10,24 @@ Le projet est organisé en 3 services indépendants:
 solcertify-solana/
 ├── backend/           # Smart contract Solana (Rust/Anchor)
 ├── frontend/          # Application React (TypeScript)
-└── ipfs-service/      # Service IPFS (Node.js)
+└── ipfs-service/      # Service IPFS (Node.js) - À implémenter
 ```
 
 ## Backend (Smart Contract)
 
 **Localisation**: `./backend/`
 
-**Technologies**: Rust, Anchor Framework, Solana
+**Technologies**: Rust, Anchor Framework 0.30.1, Solana 1.18.26
+
+**Statut**: Complet (18/18 tests passants)
 
 **Contient**:
 
 - `programs/solcertify/src/` - Code du smart contract
   - `lib.rs` - Point d'entrée du programme
-  - `state/` - Structures de données on-chain
-  - `processor/` - Logique métier (Instructions)
-  - `errors/` - Codes d'erreur personnalisés
+  - `state/` - Structures de données on-chain (Authority, Certificate, UserActivity)
+  - `processor/` - Logique métier (6 Instructions)
+  - `errors/` - 14 codes d'erreur personnalisés
 - `tests/` - Tests unitaires en TypeScript
 - `Anchor.toml` - Configuration Anchor
 - `Cargo.toml` - Configuration Rust/Cargo
@@ -34,10 +36,9 @@ solcertify-solana/
 
 ```bash
 cd backend
-cargo build-sbf # Compiler (Recommandé pour compatibilité)
-anchor build    # Compiler (Alternative)
-anchor test     # Tester
-anchor deploy   # Déployer
+cargo build-bpf --manifest-path programs/solcertify/Cargo.toml  # Compiler
+anchor deploy                                                     # Déployer
+npx mocha tests_js/solcertify.js --timeout 1000000               # Tester
 ```
 
 **Fichiers générés**:
@@ -51,34 +52,44 @@ anchor deploy   # Déployer
 
 **Technologies**: React 18, TypeScript, Vite, TailwindCSS
 
+**Statut**:  Phase 4 complète
+
 **Contient**:
 
 - `src/` - Code source React
   - `components/` - Composants UI
+    - `Navbar.tsx` - Navigation avec wallet
+    - `AuthorityInfo.tsx` - Statistiques globales
+    - `VerifyWatch.tsx` - Vérification d'authenticité
+    - `UserCertificates.tsx` - Collection personnelle
+    - `IssueCertificateForm.tsx` - Émission de certificats
   - `hooks/` - Custom hooks
-  - `utils/` - Utilitaires
+    - `useSolCertify.ts` - Interaction avec le smart contract
+  - `idl/` - IDL du programme
 - `package.json` - Dépendances npm
+- `tailwind.config.js` - Thème Luxury (or/sombre)
 
 **Commandes**:
 
 ```bash
 cd frontend
 npm install     # Installer
-npm run dev     # Développement
+npm run dev     # Développement (localhost:5173)
 npm run build   # Production
 ```
 
 **Variables d'environnement** (`.env.local`):
 
-- `VITE_SOLANA_RPC_URL` - URL du RPC Solana
+- `VITE_SOLANA_RPC_URL` - URL du RPC Solana (default: <http://localhost:8899>)
 - `VITE_PROGRAM_ID` - ID du programme
-- `VITE_IPFS_API_URL` - URL du service IPFS
 
 ## IPFS Service (Node.js)
 
 **Localisation**: `./ipfs-service/`
 
 **Technologies**: Node.js, Express, Pinata SDK
+
+**Statut**:  À implémenter (Phase 5)
 
 **Contient**:
 
@@ -107,6 +118,8 @@ npm start       # Démarrer
 ## Docker
 
 **Localisation**: `./docker/`
+
+**Statut**:  À finaliser (Phase 6)
 
 **Fichiers**:
 
@@ -163,12 +176,15 @@ docker-compose down
 ## Workflow de développement
 
 1. **Backend d'abord**: Développer et tester le smart contract
-2. **Service IPFS**: Implémenter l'API de stockage
-3. **Frontend**: Construire l'interface une fois le backend stable
+2. **Frontend**: Construire l'interface une fois le backend stable
+3. **Service IPFS**: Implémenter l'API de stockage
+4. **Docker**: Conteneurisation finale
 
 ## Phase actuelle
 
- Phase 1: Restructuration complète
- Phase 2: Implémentation du smart contract
- Phase 3: Finalisation Backend & Tests complets (100% Passing)
- Phase 4: Frontend
+- Phase 1: Restructuration complète
+- Phase 2: Implémentation du smart contract
+- Phase 3: Finalisation Backend & Tests complets (18/18 Passing)
+- Phase 4: Frontend React + Wallet Integration
+- Phase 5: Service IPFS
+- Phase 6: Docker & Déploiement
