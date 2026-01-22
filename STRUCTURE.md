@@ -1,147 +1,149 @@
 # Structure du projet SolCertify
 
-Ce document explique l'organisation du projet après la restructuration.
+Ce document explique l'organisation du projet apres la restructuration.
 
 ## Vue d'ensemble
 
-Le projet est organisé en 3 services indépendants:
+Le projet est organise en 3 services independants:
 
 ```text
 solcertify-solana/
 ├── backend/           # Smart contract Solana (Rust/Anchor)
 ├── frontend/          # Application React (TypeScript)
-└── ipfs-service/      # Service IPFS (Node.js) - À implémenter
+└── ipfs-service/      # Service IPFS (Node.js)
 ```
 
 ## Backend (Smart Contract)
 
-**Localisation**: `./backend/`
+Localisation: `./backend/`
 
-**Technologies**: Rust, Anchor Framework 0.30.1, Solana 1.18.26
+Technologies: Rust, Anchor Framework 0.30.1, Solana 1.18.26
 
-**Statut**: Complet (18/18 tests passants)
+Statut: Complet (18/18 tests passants)
 
-**Contient**:
+Contient:
 
 - `programs/solcertify/src/` - Code du smart contract
-  - `lib.rs` - Point d'entrée du programme
-  - `state/` - Structures de données on-chain (Authority, Certificate, UserActivity)
-  - `processor/` - Logique métier (6 Instructions)
-  - `errors/` - 14 codes d'erreur personnalisés
+  - `lib.rs` - Point d'entree du programme
+  - `state/` - Structures de donnees on-chain (Authority, Certificate, UserActivity)
+  - `processor/` - Logique metier (6 Instructions)
+  - `errors/` - 14 codes d'erreur personnalises
 - `tests/` - Tests unitaires en TypeScript
 - `Anchor.toml` - Configuration Anchor
 - `Cargo.toml` - Configuration Rust/Cargo
 
-**Commandes**:
+Commandes:
 
 ```bash
 cd backend
 cargo build-bpf --manifest-path programs/solcertify/Cargo.toml  # Compiler
-anchor deploy                                                     # Déployer
+anchor deploy                                                     # Deployer
 npx mocha tests_js/solcertify.js --timeout 1000000               # Tester
 ```
 
-**Fichiers générés**:
+Fichiers generes:
 
-- `target/deploy/solcertify.so` - Programme compilé
+- `target/deploy/solcertify.so` - Programme compile
 - `target/idl/solcertify.json` - IDL pour le frontend
 
 ## Frontend (React)
 
-**Localisation**: `./frontend/`
+Localisation: `./frontend/`
 
-**Technologies**: React 18, TypeScript, Vite, TailwindCSS
+Technologies: React 18, TypeScript, Vite, TailwindCSS
 
-**Statut**:  Phase 4 complète
+Statut: Phase 5 complete
 
-**Contient**:
+Contient:
 
 - `src/` - Code source React
   - `components/` - Composants UI
     - `Navbar.tsx` - Navigation avec wallet
     - `AuthorityInfo.tsx` - Statistiques globales
-    - `VerifyWatch.tsx` - Vérification d'authenticité
+    - `VerifyWatch.tsx` - Verification d'authenticite
     - `UserCertificates.tsx` - Collection personnelle
-    - `IssueCertificateForm.tsx` - Émission de certificats
+    - `IssueCertificateForm.tsx` - Emission de certificats
   - `hooks/` - Custom hooks
     - `useSolCertify.ts` - Interaction avec le smart contract
   - `idl/` - IDL du programme
-- `package.json` - Dépendances npm
-- `tailwind.config.js` - Thème Luxury (or/sombre)
+- `package.json` - Dependances npm
+- `tailwind.config.js` - Theme Luxury (or/sombre)
 
-**Commandes**:
+Commandes:
 
 ```bash
 cd frontend
 npm install     # Installer
-npm run dev     # Développement (localhost:5173)
+npm run dev     # Developpement (localhost:5173)
 npm run build   # Production
 ```
 
-**Variables d'environnement** (`.env.local`):
+Variables d'environnement (.env.local):
 
 - `VITE_SOLANA_RPC_URL` - URL du RPC Solana (default: <http://localhost:8899>)
 - `VITE_PROGRAM_ID` - ID du programme
 
 ## IPFS Service (Node.js)
 
-**Localisation**: `./ipfs-service/`
+Localisation: `./ipfs-service/`
 
-**Technologies**: Node.js, Express, Pinata SDK
+Technologies: Node.js, Express, Pinata SDK
 
-**Statut**:  À implémenter (Phase 5)
+Statut: Complet
 
-**Contient**:
+Contient:
 
 - `server.js` - Serveur Express
-- `package.json` - Dépendances npm
+- `package.json` - Dependances npm
 
-**Commandes**:
+Commandes:
 
 ```bash
 cd ipfs-service
 npm install     # Installer
-npm start       # Démarrer
+npm start       # Demarrer
 ```
 
-**Variables d'environnement** (`.env`):
+Variables d'environnement (.env):
 
-- `PINATA_API_KEY` - Clé API Pinata
-- `PINATA_SECRET_KEY` - Clé secrète Pinata
+- `PINATA_JWT` - JWT Token Pinata
+- `PINATA_GATEWAY` - Gateway Pinata
 - `PORT` - Port du serveur (3001)
 
-**Endpoints**:
+Endpoints:
 
+- `GET /health` - Health check
 - `POST /api/upload/image` - Upload d'image
-- `POST /api/metadata/create` - Création de métadonnées
+- `POST /api/metadata/create` - Creation de metadonnees
+- `POST /api/certificate/full` - Certificat complet
 
 ## Docker
 
-**Localisation**: `./docker/`
+Localisation: `./docker/`
 
-**Statut**:  À finaliser (Phase 6)
+Statut: A finaliser (Phase 6)
 
-**Fichiers**:
+Fichiers:
 
 - `Dockerfile.backend` - Image pour le backend Solana
 - `Dockerfile.frontend` - Image pour l'app React
 - `Dockerfile.ipfs` - Image pour le service IPFS
 - `docker-compose.yml` - Orchestration des services
 
-**Commandes**:
+Commandes:
 
 ```bash
-# Démarrer tous les services
+# Demarrer tous les services
 docker-compose up -d
 
 # Voir les logs
 docker-compose logs -f
 
-# Arrêter
+# Arreter
 docker-compose down
 ```
 
-**Services exposés**:
+Services exposes:
 
 - Backend: `localhost:8899` (RPC Solana)
 - Frontend: `localhost:5173` (Vite)
@@ -149,16 +151,16 @@ docker-compose down
 
 ## Documentation
 
-**À la racine**:
+A la racine:
 
 - `README.md` - Documentation principale
-- `CLAUDE.md` - Instructions de développement (privé)
-- `SPECIFICATION.md` - Spécifications complètes (privé)
-- `PHASES.md` - Plan de développement (privé)
-- `DOCKER.md` - Guide Docker (privé)
+- `CLAUDE.md` - Instructions de developpement (prive)
+- `SPECIFICATION.md` - Specifications completes (prive)
+- `PHASES.md` - Plan de developpement (prive)
+- `DOCKER.md` - Guide Docker (prive)
 - `.env.example` - Template des variables d'environnement
 
-**Par service**:
+Par service:
 
 - `backend/README.md` - Documentation backend
 - `frontend/README.md` - Documentation frontend
@@ -166,25 +168,25 @@ docker-compose down
 
 ## Avantages de cette structure
 
-1. **Séparation claire** - Chaque service est indépendant
-2. **Scalabilité** - Facile d'ajouter de nouveaux services
-3. **Docker-ready** - Chaque service a son propre container
-4. **Maintenance** - Facile de travailler sur une partie sans affecter les autres
-5. **Git** - Possibilité de faire des sous-modules si nécessaire
-6. **CI/CD** - Plus facile de mettre en place des pipelines par service
+1. Separation claire - Chaque service est independant
+2. Scalabilite - Facile d'ajouter de nouveaux services
+3. Docker-ready - Chaque service a son propre container
+4. Maintenance - Facile de travailler sur une partie sans affecter les autres
+5. Git - Possibilite de faire des sous-modules si necessaire
+6. CI/CD - Plus facile de mettre en place des pipelines par service
 
-## Workflow de développement
+## Workflow de developpement
 
-1. **Backend d'abord**: Développer et tester le smart contract
-2. **Frontend**: Construire l'interface une fois le backend stable
-3. **Service IPFS**: Implémenter l'API de stockage
-4. **Docker**: Conteneurisation finale
+1. Backend d'abord: Developper et tester le smart contract
+2. Frontend: Construire l'interface une fois le backend stable
+3. Service IPFS: Implementer l'API de stockage
+4. Docker: Conteneurisation finale
 
 ## Phase actuelle
 
-- Phase 1: Restructuration complète
-- Phase 2: Implémentation du smart contract
-- Phase 3: Finalisation Backend & Tests complets (18/18 Passing)
-- Phase 4: Frontend React + Wallet Integration
-- Phase 5: Service IPFS
-- Phase 6: Docker & Déploiement
+- Phase 1: Restructuration complete
+- Phase 2: Implementation du smart contract
+- Phase 3: Finalisation Backend et Tests complets (18/18 Passing)
+- Phase 4: Service IPFS
+- Phase 5: Frontend React + Wallet Integration
+- Phase 6: Docker et Deploiement (A faire)
