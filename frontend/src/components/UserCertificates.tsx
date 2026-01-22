@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSolCertify } from '../hooks/useSolCertify';
 import { Watch, Calendar, Lock, History, ExternalLink, Clock, AlertCircle, CheckCircle, Timer } from 'lucide-react';
 import { clsx } from 'clsx';
-import { PublicKey } from '@solana/web3.js';
+// import { PublicKey } from '@solana/web3.js'; removed unused
 
 export const UserCertificates = () => {
     const { program, wallet } = useSolCertify();
