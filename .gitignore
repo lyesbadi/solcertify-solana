@@ -1,5 +1,6 @@
 # Solana / Anchor
 .anchor
+.agent/
 .DS_Store
 target/
 deploy/
