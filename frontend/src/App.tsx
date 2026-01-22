@@ -3,8 +3,9 @@ import { Navbar } from './components/Navbar';
 import { AuthorityInfo } from './components/AuthorityInfo';
 import { UserCertificates } from './components/UserCertificates';
 import { VerifyWatch } from './components/VerifyWatch';
+import { IssueCertificateForm } from './components/IssueCertificateForm';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Fingerprint, Search, ShieldCheck, Watch } from 'lucide-react';
+import { Fingerprint, Search, ShieldCheck, Watch, Award } from 'lucide-react';
 import { clsx } from 'clsx';
 
 type TabType = 'verify' | 'my-watches' | 'admin';
@@ -46,6 +47,15 @@ function App() {
                         >
                             <Watch size={16} /> Mes Montres
                         </button>
+                        <button
+                            onClick={() => setActiveTab('admin')}
+                            className={clsx(
+                                "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                                activeTab === 'admin' ? "bg-gold-gradient text-white shadow-gold-glow" : "text-slate-400 hover:text-white"
+                            )}
+                        >
+                            <Award size={16} /> Certificateurs
+                        </button>
                     </div>
                 </div>
 
@@ -76,6 +86,22 @@ function App() {
                                         </div>
                                         <UserCertificates />
                                     </div>
+                                )}
+                            </section>
+                        )}
+
+                        {activeTab === 'admin' && (
+                            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                {!connected ? (
+                                    <div className="luxury-card py-20 text-center flex flex-col items-center gap-4 border-dashed">
+                                        <Fingerprint className="text-slate-700" size={48} />
+                                        <div className="space-y-1">
+                                            <h3 className="text-white font-semibold">Wallet requis</h3>
+                                            <p className="text-slate-500 text-sm">Veuillez connecter votre wallet pour accéder à l'espace certificateur.</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <IssueCertificateForm />
                                 )}
                             </section>
                         )}
