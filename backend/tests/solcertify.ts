@@ -35,6 +35,7 @@ describe("solcertify", () => {
   let certifier2: Keypair;
   let owner1: Keypair;
   let owner2: Keypair;
+  let owner3: Keypair;
   let treasury: Keypair;
   let unauthorized: Keypair;
 
@@ -105,6 +106,10 @@ describe("solcertify", () => {
     await airdrop(owner1.publicKey, 2);
     await airdrop(owner2.publicKey, 2);
     await airdrop(unauthorized.publicKey, 1);
+
+    // Initialiser owner3 pour les tests de demande (car owner2 est saturé)
+    owner3 = Keypair.generate();
+    await airdrop(owner3.publicKey, 2);
 
     // Calculer authority PDA
     [authorityPda, authorityBump] = PublicKey.findProgramAddressSync(
@@ -590,8 +595,229 @@ describe("solcertify", () => {
         expect.fail("Devrait lever une erreur NotOwner");
       } catch (err: any) {
         expect(err).to.exist;
-        console.log("Erreur attendue: non-propriétaire");
+        console.log("Erreur attendue: non-proprietaire");
       }
+    });
+  });
+
+  // ==================== TESTS DEMANDES DE CERTIFICATION ====================
+  describe("Tests demandes de certification", () => {
+    const requestSerial1 = "REQUEST-TEST-001";
+    const requestSerial2 = "REQUEST-TEST-002";
+    const requestSerial3 = "REQUEST-REJECT-001";
+
+    function getRequestPda(serialNumber: string): [PublicKey, number] {
+      return PublicKey.findProgramAddressSync(
+        [Buffer.from("request"), Buffer.from(serialNumber)],
+        program.programId
+      );
+    }
+
+    it("Utilisateur soumet une demande de certification", async () => {
+      const [requestPda] = getRequestPda(requestSerial1);
+
+      await program.methods
+        .requestCertification(
+          requestSerial1,
+          "Omega",
+          "Speedmaster",
+          { premium: {} },
+          new anchor.BN(12000),
+          "ipfs://QmTestMetadata123"
+        )
+        .accounts({
+          requester: owner1.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          treasury: treasury.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([owner1])
+        .rpc();
+
+      const request = await program.account.certificationRequest.fetch(requestPda);
+
+      expect(request.requester.toString()).to.equal(owner1.publicKey.toString());
+      expect(request.serialNumber).to.equal(requestSerial1);
+      expect(request.brand).to.equal("Omega");
+      expect(request.model).to.equal("Speedmaster");
+      expect(request.status.pending).to.exist;
+      expect(request.feePaid.toNumber()).to.be.greaterThan(0);
+
+      console.log("Demande de certification soumise avec succes");
+      console.log("Frais payes:", request.feePaid.toString(), "lamports");
+    });
+
+    it("Certificateur approuve une demande", async () => {
+      const [requestPda] = getRequestPda(requestSerial1);
+      const [certificatePda] = getCertificatePda(requestSerial1);
+      const [ownerActivityPda] = getUserActivityPda(owner1.publicKey);
+
+      // Recuperer le solde du certificateur avant
+      const certifierBalanceBefore = await provider.connection.getBalance(certifier.publicKey);
+
+      await program.methods
+        .approveCertification()
+        .accounts({
+          certifier: certifier.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          certificate: certificatePda,
+          ownerActivity: ownerActivityPda,
+          treasury: treasury.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([certifier])
+        .rpc();
+
+      // Verifier la demande mise a jour
+      const request = await program.account.certificationRequest.fetch(requestPda);
+      expect(request.status.approved).to.exist;
+      expect(request.assignedCertifier.toString()).to.equal(certifier.publicKey.toString());
+
+      // Verifier le certificat cree
+      const certificate = await program.account.certificate.fetch(certificatePda);
+      expect(certificate.serialNumber).to.equal(requestSerial1);
+      expect(certificate.owner.toString()).to.equal(owner1.publicKey.toString());
+      expect(certificate.certifier.toString()).to.equal(certifier.publicKey.toString());
+
+      // Verifier que le certificateur a recu sa part (60%)
+      const certifierBalanceAfter = await provider.connection.getBalance(certifier.publicKey);
+      // Le certificateur devrait avoir gagne des lamports (moins les frais de tx)
+      console.log("Certificateur balance avant:", certifierBalanceBefore);
+      console.log("Certificateur balance apres:", certifierBalanceAfter);
+
+      console.log("Demande approuvee et certificat cree");
+    });
+
+    it("Echec approbation par non-certificateur", async () => {
+      // D'abord creer une nouvelle demande
+      const [requestPda] = getRequestPda(requestSerial2);
+
+      await program.methods
+        .requestCertification(
+          requestSerial2,
+          "Cartier",
+          "Santos",
+          { luxury: {} },
+          new anchor.BN(25000),
+          "ipfs://QmTestMetadata456"
+        )
+        .accounts({
+          requester: owner3.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          treasury: treasury.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([owner3])
+        .rpc();
+
+      // Essayer d'approuver avec un non-certificateur
+      const [certificatePda] = getCertificatePda(requestSerial2);
+      const [ownerActivityPda] = getUserActivityPda(owner3.publicKey);
+
+      try {
+        await program.methods
+          .approveCertification()
+          .accounts({
+            certifier: unauthorized.publicKey,
+            authority: authorityPda,
+            request: requestPda,
+            certificate: certificatePda,
+            ownerActivity: ownerActivityPda,
+            treasury: treasury.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          })
+          .signers([unauthorized])
+          .rpc();
+
+        expect.fail("Devrait lever une erreur UnauthorizedCertifier");
+      } catch (err: any) {
+        expect(err).to.exist;
+        console.log("Erreur attendue: non-certificateur ne peut pas approuver");
+      }
+    });
+
+    it("Certificateur rejette une demande avec remboursement", async () => {
+      // Creer une demande a rejeter
+      const [requestPda] = getRequestPda(requestSerial3);
+
+      // Solde avant du demandeur
+      const requesterBalanceBefore = await provider.connection.getBalance(owner1.publicKey);
+
+      await program.methods
+        .requestCertification(
+          requestSerial3,
+          "Fake",
+          "Watch",
+          { standard: {} },
+          new anchor.BN(1000),
+          "ipfs://QmFakeWatch"
+        )
+        .accounts({
+          requester: owner1.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          treasury: treasury.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([owner1])
+        .rpc();
+
+      const requestBefore = await program.account.certificationRequest.fetch(requestPda);
+      const feePaid = requestBefore.feePaid.toNumber();
+
+      // Rejeter la demande
+      await program.methods
+        .rejectCertification("Authenticite non verifiable - photos insuffisantes")
+        .accounts({
+          certifier: certifier.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          requester: owner1.publicKey,
+          treasury: treasury.publicKey,
+        })
+        .signers([certifier])
+        .rpc();
+
+      // Verifier la demande mise a jour
+      const request = await program.account.certificationRequest.fetch(requestPda);
+      expect(request.status.rejected).to.exist;
+      expect(request.rejectionReason).to.include("Authenticite non verifiable");
+
+      // Verifier le remboursement
+      const requesterBalanceAfter = await provider.connection.getBalance(owner1.publicKey);
+      console.log("Demandeur balance avant:", requesterBalanceBefore);
+      console.log("Demandeur balance apres:", requesterBalanceAfter);
+      console.log("Frais rembourses:", feePaid, "lamports");
+
+      console.log("Demande rejetee et frais rembourses");
+    });
+
+    it("Approuver la demande restante", async () => {
+      // Approuver requestSerial2
+      const [requestPda] = getRequestPda(requestSerial2);
+      const [certificatePda] = getCertificatePda(requestSerial2);
+      const [ownerActivityPda] = getUserActivityPda(owner3.publicKey);
+
+      await program.methods
+        .approveCertification()
+        .accounts({
+          certifier: certifier.publicKey,
+          authority: authorityPda,
+          request: requestPda,
+          certificate: certificatePda,
+          ownerActivity: ownerActivityPda,
+          treasury: treasury.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([certifier])
+        .rpc();
+
+      const certificate = await program.account.certificate.fetch(certificatePda);
+      expect(certificate.serialNumber).to.equal(requestSerial2);
+      console.log("Deuxieme demande approuvee");
     });
   });
 
