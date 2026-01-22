@@ -23,15 +23,123 @@
   }
 }
 
-/* Custom Wallet Adapter Styles */
+/* Custom Wallet Adapter Styles Overrides */
+
+/* Le bouton principal de connexion dans la Navbar */
 .wallet-adapter-button {
-  @apply !bg-gold-gradient !font-semibold !rounded-lg !transition-all !duration-300;
+  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.3s ease !important;
+  color: white !important;
+  height: 40px !important;
+  padding: 0 24px !important;
 }
 
 .wallet-adapter-button:not([disabled]):hover {
-  @apply !bg-gold-600;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
+/* La MODAL (Container principal) */
+.wallet-adapter-modal-wrapper {
+  background: #0a0a0b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.1) !important;
+  padding: 2rem !important;
+  width: 360px !important;
+}
+
+/* Titre de la modal */
+.wallet-adapter-modal-title {
+  color: white !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 1.25rem !important;
+  margin-bottom: 1.5rem !important;
+  text-align: center !important;
+}
+
+/* Bouton de fermeture (la croix) */
+.wallet-adapter-modal-button-close {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 50% !important;
+  width: 30px !important;
+  height: 30px !important;
+  top: 15px !important;
+  right: 15px !important;
+}
+
+.wallet-adapter-modal-button-close svg {
+  fill: #94a3b8 !important;
+  transform: scale(0.7);
+}
+
+.wallet-adapter-modal-button-close:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Liste des wallets (Boutons individuels) */
+.wallet-adapter-modal-list {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button {
+  background: rgba(255, 255, 255, 0.03) !important;
+  /* Fond sombre transparent */
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #e2e8f0 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 500 !important;
+  width: 100% !important;
+  justify-content: space-between !important;
+  height: 56px !important;
+  border-radius: 0.75rem !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button:not([disabled]):hover {
+  background: rgba(212, 175, 55, 0.1) !important;
+  /* Lueur dorée au survol */
+  border-color: rgba(212, 175, 55, 0.3) !important;
+  color: #D4AF37 !important;
+  transform: none !important;
+}
+
+/* Icones des wallets */
+.wallet-adapter-button-start-icon {
+  width: 28px !important;
+  height: 28px !important;
+  margin-right: 12px !important;
+}
+
+/* Le texte "Detected" */
+.wallet-adapter-modal-list-more {
+  color: #64748b !important;
+  font-size: 0.85rem !important;
+}
+
+/* Textes secondaires/explications */
+.wallet-adapter-modal-middle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.wallet-adapter-modal-middle-button {
+  display: none !important;
+  /* Cache le bouton "More options" si moche */
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
