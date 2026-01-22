@@ -6,12 +6,12 @@ Plateforme de certification d'authenticité pour montres de luxe sur la blockcha
 
 | Phase | Description | Statut |
 |-------|-------------|--------|
-| Phase 1 | Restructuration |  Complet |
-| Phase 2 | Smart Contract |  Complet |
-| Phase 3 | Tests Backend |  18/18 passants |
-| Phase 4 | Frontend React |  Complet |
-| Phase 5 | Service IPFS |  En cours |
-| Phase 6 | Docker |  À venir |
+| Phase 1 | Restructuration | Complet |
+| Phase 2 | Smart Contract | Complet |
+| Phase 3 | Tests Backend | 18/18 passants |
+| Phase 4 | Service IPFS | Complet |
+| Phase 5 | Frontend React | Complet |
+| Phase 6 | Docker | A venir |
 
 ## Structure du projet
 
@@ -28,12 +28,12 @@ solcertify-solana/
 │   │   ├── components/        # Navbar, VerifyWatch, UserCertificates, etc.
 │   │   ├── hooks/             # useSolCertify
 │   │   └── idl/               # IDL du programme
-│   ├── package.json           # Dépendances npm
+│   ├── package.json           # Dependances npm
 │   └── vite.config.ts         # Configuration Vite
 │
 ├── ipfs-service/              # Service IPFS (Node.js)
 │   ├── server.js              # API Express
-│   └── package.json           # Dépendances npm
+│   └── package.json           # Dependances npm
 │
 ├── docker/                    # Dockerfiles
 │   ├── Dockerfile.backend     # Container Solana
@@ -43,29 +43,35 @@ solcertify-solana/
 └── docker-compose.yml         # Orchestration
 ```
 
-## Fonctionnalités
+## Fonctionnalites
 
 ### Smart Contract (Solana)
 
 - 6 Instructions : Initialize, AddCertifier, RemoveCertifier, IssueCertificate, TransferCertificate, VerifyCertificate
 - 4 types de certification (Standard, Premium, Luxury, Exceptional)
-- Certificateurs agréés uniquement (max 50)
+- Certificateurs agrees uniquement (max 50)
 - Limite de 4 certificats par utilisateur
 - Cooldown de 5 minutes entre transactions
-- Lock de 10 minutes après acquisition
+- Lock de 10 minutes apres acquisition
 - Paiement en SOL (0.05 - 0.5 SOL selon le type)
 
 ### Frontend (React)
 
-- **Vérification publique** : Consulter l'authenticité par numéro de série
-- **Wallet Integration** : Phantom & Solflare
-- **Collection personnelle** : Voir ses certificats
-- **Émission** : Interface pour les certificateurs agréés
-- **Design Luxury** : Thème sombre avec accents dorés
+- Verification publique : Consulter l'authenticite par numero de serie
+- Wallet Integration : Phantom et Solflare
+- Collection personnelle : Voir ses certificats
+- Emission : Interface pour les certificateurs agrees
+- Design Luxury : Theme sombre avec accents dores
+
+### Service IPFS
+
+- Upload d'images vers IPFS via Pinata
+- Generation de metadonnees JSON au format NFT
+- API REST pour le frontend
 
 ## Installation
 
-### Prérequis
+### Prerequis
 
 - Node.js 18+
 - Rust 1.75+
@@ -74,15 +80,15 @@ solcertify-solana/
 
 ### Backend (Solana)
 
-> **Note** : Voir `backend/README.md` pour les instructions détaillées.
+Voir `backend/README.md` pour les instructions detaillees.
 
 ```bash
 cd backend
 
-# Démarrer le validateur local (Terminal 1)
+# Demarrer le validateur local (Terminal 1)
 solana-test-validator
 
-# Build & Deploy (Terminal 2)
+# Build et Deploy (Terminal 2)
 cargo build-bpf --manifest-path programs/solcertify/Cargo.toml
 anchor deploy
 
@@ -99,7 +105,7 @@ npm install
 npm run dev
 ```
 
-Accéder à `http://localhost:5173`
+Acceder a `http://localhost:5173`
 
 ### Service IPFS
 
@@ -109,6 +115,8 @@ npm install
 npm start
 ```
 
+Acceder a `http://localhost:3001/health`
+
 ## Docker
 
 Lancer tous les services avec Docker Compose:
@@ -117,9 +125,9 @@ Lancer tous les services avec Docker Compose:
 # Copier le fichier .env
 cp .env.example .env
 
-# Configurer vos clés Pinata dans .env
+# Configurer vos cles Pinata dans .env
 
-# Démarrer les services
+# Demarrer les services
 docker-compose up -d
 
 # Voir les logs
@@ -128,21 +136,13 @@ docker-compose logs -f
 
 ## Technologies
 
-- **Blockchain**: Solana (Localnet/Devnet/Mainnet)
-- **Framework**: Anchor 0.30.1
-- **Smart Contract**: Rust
-- **Frontend**: React 18 + Vite + TailwindCSS
-- **Wallet**: Phantom, Solflare
-- **Storage**: IPFS via Pinata
-- **Tests**: Mocha (TypeScript)
-
-## Screenshots
-
-La vérification d'authenticité fonctionne en temps réel depuis la blockchain :
-
-- Rolex Submariner Date (Standard - 5 000 EUR)
-- Omega Seamaster Diver 300M (Premium - 8 000 EUR)
-- Patek Philippe Nautilus 5711 (Luxury - 50 000 EUR)
+- Blockchain: Solana (Localnet/Devnet/Mainnet)
+- Framework: Anchor 0.30.1
+- Smart Contract: Rust
+- Frontend: React 18 + Vite + TailwindCSS
+- Wallet: Phantom, Solflare
+- Storage: IPFS via Pinata
+- Tests: Mocha (TypeScript)
 
 ## Licence
 

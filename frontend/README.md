@@ -2,27 +2,41 @@
 
 Interface utilisateur pour SolCertify construite avec React, Vite et TailwindCSS.
 
+## Statut
+
+Phase 5 Complete - Frontend fonctionnel avec wallet integration.
+
 ## Structure
 
-```
+```text
 frontend/
 ├── src/
-│   ├── components/      # Composants React
-│   ├── hooks/           # Custom hooks
-│   ├── utils/           # Utilitaires
-│   ├── App.tsx          # Composant principal
-│   └── main.tsx         # Point d'entrée
-├── package.json
-└── vite.config.ts
+│   ├── components/
+│   │   ├── Navbar.tsx           # Navigation + wallet button
+│   │   ├── AuthorityInfo.tsx    # Statistiques globales
+│   │   ├── VerifyWatch.tsx      # Verification d'authenticite
+│   │   ├── UserCertificates.tsx # Collection personnelle
+│   │   └── IssueCertificateForm.tsx # Emission (certificateurs)
+│   ├── hooks/
+│   │   └── useSolCertify.ts     # Hook d'interaction Anchor
+│   ├── idl/
+│   │   └── solcertify.json      # IDL du programme
+│   ├── App.tsx                  # Layout principal avec tabs
+│   ├── main.tsx                 # Entry point + providers
+│   └── index.css                # Styles Tailwind + custom
+├── tailwind.config.js           # Theme Luxury (or/sombre)
+├── postcss.config.js            # PostCSS config
+├── vite.config.ts               # Vite + polyfills Buffer
+└── package.json                 # Dependances
 ```
 
 ## Commandes
 
 ```bash
-# Installer les dépendances
+# Installer les dependances
 npm install
 
-# Lancer le serveur de développement
+# Lancer le serveur de developpement
 npm run dev
 
 # Build pour production
@@ -38,19 +52,24 @@ npm run preview
 - TypeScript
 - Vite
 - TailwindCSS
-- @solana/wallet-adapter
+- @solana/wallet-adapter (Phantom, Solflare)
 - @coral-xyz/anchor
 
 ## Variables d'environnement
 
-Créer un fichier `.env.local`:
+Creer un fichier `.env.local`:
 
 ```env
-VITE_SOLANA_RPC_URL=https://api.devnet.solana.com
-VITE_PROGRAM_ID=FspmA7UoptTCbR1oq1Rd5iHg737gTeKCRfZwfJtj7Fjb
+VITE_SOLANA_RPC_URL=http://localhost:8899
+VITE_PROGRAM_ID=FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee
 VITE_IPFS_API_URL=http://localhost:3001
 ```
 
-## Phase actuelle
+## Fonctionnalites
 
-Phase 5  - Développement du frontend (à la fin du projet)
+- Verification publique par numero de serie
+- Affichage des certificats personnels
+- Formulaire d'emission pour certificateurs
+- Statistiques globales du registre
+- Design Luxury (theme sombre + accents dores)
+- Integration wallet Phantom/Solflare
