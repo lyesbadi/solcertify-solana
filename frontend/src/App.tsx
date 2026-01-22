@@ -1,22 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { AuthorityInfo } from './components/AuthorityInfo';
 import { UserCertificates } from './components/UserCertificates';
 import { VerifyWatch } from './components/VerifyWatch';
-import { IssueCertificateForm } from './components/IssueCertificateForm';
+import { RequestCertificationForm } from './components/RequestCertificationForm';
+import { CertifierDashboard } from './components/CertifierDashboard';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { Fingerprint, Search, ShieldCheck, Watch, Award } from 'lucide-react';
+import { useSolCertify } from './hooks/useSolCertify';
+import { PublicKey } from '@solana/web3.js';
+import { Fingerprint, Search, ShieldCheck, Watch, Award, Send } from 'lucide-react';
 import { clsx } from 'clsx';
 
-type TabType = 'verify' | 'my-watches' | 'admin';
+type TabType = 'verify' | 'my-watches' | 'certify';
 
 function App() {
-    const { connected } = useWallet();
+    const { connected, publicKey } = useWallet();
+    const { program, getAuthorityPda } = useSolCertify();
     const [activeTab, setActiveTab] = useState<TabType>('verify');
+    const [isCertifier, setIsCertifier] = useState(false);
+
+    useEffect(() => {
+        const checkCertifier = async () => {
+            if (!program || !connected || !publicKey) {
+                setIsCertifier(false);
+                return;
+            }
+            try {
+                const [authorityPda] = getAuthorityPda();
+                const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
+                const certifiers = authority.certifiers as PublicKey[];
+                const isAuth = certifiers.some(c => c.toString() === publicKey.toString());
+                setIsCertifier(isAuth);
+            } catch (e) {
+                console.error("Error checking certifier:", e);
+                setIsCertifier(false);
+            }
+        };
+        checkCertifier();
+    }, [program, connected, publicKey, getAuthorityPda]);
 
     return (
         <div className="min-h-screen bg-dark-gradient selection:bg-gold-500/30">
-            <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+            <Navbar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabType)} />
 
             <main className="max-w-7xl mx-auto px-6 py-12 space-y-12">
                 {/* Header / Tabs */}
@@ -48,13 +73,14 @@ function App() {
                             <Watch size={16} /> Mes Montres
                         </button>
                         <button
-                            onClick={() => setActiveTab('admin')}
+                            onClick={() => setActiveTab('certify')}
                             className={clsx(
                                 "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
-                                activeTab === 'admin' ? "bg-gold-gradient text-white shadow-gold-glow" : "text-slate-400 hover:text-white"
+                                activeTab === 'certify' ? "bg-gold-gradient text-white shadow-gold-glow" : "text-slate-400 hover:text-white"
                             )}
                         >
-                            <Award size={16} /> Certificateurs
+                            {isCertifier ? <Award size={16} /> : <Send size={16} />}
+                            {isCertifier ? 'Espace Certificateur' : 'Demander Certification'}
                         </button>
                     </div>
                 </div>
@@ -90,18 +116,18 @@ function App() {
                             </section>
                         )}
 
-                        {activeTab === 'admin' && (
+                        {activeTab === 'certify' && (
                             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {!connected ? (
                                     <div className="luxury-card py-20 text-center flex flex-col items-center gap-4 border-dashed">
                                         <Fingerprint className="text-slate-700" size={48} />
                                         <div className="space-y-1">
                                             <h3 className="text-white font-semibold">Wallet requis</h3>
-                                            <p className="text-slate-500 text-sm">Veuillez connecter votre wallet pour accéder à l'espace certificateur.</p>
+                                            <p className="text-slate-500 text-sm">Veuillez connecter votre wallet pour soumettre ou gérer des certifications.</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <IssueCertificateForm />
+                                    isCertifier ? <CertifierDashboard /> : <RequestCertificationForm />
                                 )}
                             </section>
                         )}
@@ -138,11 +164,11 @@ function App() {
                             <h4 className="text-white font-medium text-sm">Prochaines étapes</h4>
                             <ul className="space-y-3">
                                 <li className="flex gap-3 text-xs text-slate-500">
-                                    <span className="w-5 h-5 rounded-full bg-gold-500/20 text-gold-500 flex items-center justify-center shrink-0">1</span>
-                                    Finaliser l'interface d'émission pour les certificateurs.
+                                    <span className="w-5 h-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">✓</span>
+                                    Finaliser l'interface d'émission (Demande & Approbation).
                                 </li>
                                 <li className="flex gap-3 text-xs text-slate-500">
-                                    <span className="w-5 h-5 rounded-full bg-white/10 text-slate-400 flex items-center justify-center shrink-0">2</span>
+                                    <span className="w-5 h-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">✓</span>
                                     Intégrer le service IPFS pour les photos haute résolution.
                                 </li>
                             </ul>

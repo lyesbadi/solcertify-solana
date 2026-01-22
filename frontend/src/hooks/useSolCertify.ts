@@ -41,12 +41,20 @@ export function useSolCertify() {
         );
     };
 
+    const getRequestPda = (serialNumber: string) => {
+        return PublicKey.findProgramAddressSync(
+            [Buffer.from("request"), Buffer.from(serialNumber)],
+            PROGRAM_ID
+        );
+    };
+
     return {
         program,
         PROGRAM_ID,
         getAuthorityPda,
         getCertificatePda,
         getUserActivityPda,
+        getRequestPda,
         wallet,
         connection
     };

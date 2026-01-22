@@ -1,21 +1,20 @@
 import { useState, useRef } from 'react';
 import { useSolCertify } from '../hooks/useSolCertify';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { SystemProgram } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import {
-    Award,
     Loader2,
     CheckCircle,
     AlertCircle,
     Watch,
-    User,
     Hash,
     FileText,
     Euro,
     Upload,
     Image as ImageIcon,
-    X
+    X,
+    Send
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { uploadImage, createMetadata } from '../services/ipfs';
@@ -61,8 +60,8 @@ const CERT_TYPES: Record<CertificationType, CertTypeInfo> = {
     },
 };
 
-export const IssueCertificateForm = () => {
-    const { program, getAuthorityPda, getCertificatePda, getUserActivityPda } = useSolCertify();
+export const RequestCertificationForm = () => {
+    const { program, getAuthorityPda, getRequestPda } = useSolCertify();
     const { publicKey } = useWallet();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +71,6 @@ export const IssueCertificateForm = () => {
         model: '',
         certType: 'standard' as CertificationType,
         estimatedValue: '',
-        ownerAddress: '',
     });
 
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -139,18 +137,16 @@ export const IssueCertificateForm = () => {
                 certType: formData.certType,
                 estimatedValue: parseInt(formData.estimatedValue),
                 imageUri: imageUri || undefined,
-                owner: formData.ownerAddress,
-                certifier: publicKey.toBase58(),
+                owner: publicKey.toBase58(), // Requester is owner
+                certifier: "Pending" // Not assigned yet
             });
 
             metadataUri = metadataResult.metadataUri;
 
-            // Step 3: Issue certificate on blockchain
+            // Step 3: Request certification on blockchain
             setStep('blockchain');
-            const ownerPubkey = new PublicKey(formData.ownerAddress);
             const [authorityPda] = getAuthorityPda();
-            const [certificatePda] = getCertificatePda(formData.serialNumber);
-            const [ownerActivityPda] = getUserActivityPda(ownerPubkey);
+            const [requestPda] = getRequestPda(formData.serialNumber);
 
             const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
             const treasuryPubkey = authority.treasury;
@@ -158,7 +154,7 @@ export const IssueCertificateForm = () => {
             const certTypeArg = { [formData.certType]: {} };
 
             const tx = await (program.methods as any)
-                .issueCertificate(
+                .requestCertification(
                     formData.serialNumber,
                     formData.brand,
                     formData.model,
@@ -167,17 +163,15 @@ export const IssueCertificateForm = () => {
                     metadataUri
                 )
                 .accounts({
-                    certifier: publicKey,
-                    owner: ownerPubkey,
+                    requester: publicKey,
                     authority: authorityPda,
-                    certificate: certificatePda,
-                    ownerActivity: ownerActivityPda,
+                    request: requestPda,
                     treasury: treasuryPubkey,
                     systemProgram: SystemProgram.programId,
                 })
                 .rpc();
 
-            setSuccess(`Certificat emis avec succes ! TX: ${tx.slice(0, 16)}...`);
+            setSuccess(`Demande envoyee avec succes ! TX: ${tx.slice(0, 16)}...`);
 
             // Reset form
             setFormData({
@@ -186,18 +180,17 @@ export const IssueCertificateForm = () => {
                 model: '',
                 certType: 'standard',
                 estimatedValue: '',
-                ownerAddress: '',
             });
             handleRemoveImage();
 
         } catch (err: any) {
-            console.error('Erreur emission certificat:', err);
-            if (err.message?.includes('UnauthorizedCertifier')) {
-                setError('Vous n\'etes pas un certificateur agree.');
-            } else if (err.message?.includes('MaxCertificatesReached')) {
-                setError('Le proprietaire a atteint la limite de 4 certificats.');
+            console.error('Erreur demande certification:', err);
+            if (err.message?.includes('RequestAlreadyExists')) {
+                setError('Une demande existe deja pour ce numero de serie.');
+            } else if (err.message?.includes('SerialNumberTooLong')) {
+                setError('Numero de serie trop long.');
             } else {
-                setError(err.message || 'Erreur lors de l\'emission du certificat.');
+                setError(err.message || 'Erreur lors de la demande.');
             }
         } finally {
             setLoading(false);
@@ -211,20 +204,20 @@ export const IssueCertificateForm = () => {
         switch (step) {
             case 'uploading': return 'Upload image vers IPFS...';
             case 'metadata': return 'Creation des metadonnees...';
-            case 'blockchain': return 'Emission sur la blockchain...';
-            default: return 'Emettre le Certificat';
+            case 'blockchain': return 'Envoi de la demande...';
+            default: return 'Envoyer la Demande (Paiement)';
         }
     };
 
     return (
         <div className="space-y-8">
             <div className="flex items-center gap-3">
-                <div className="bg-gold-500/20 p-3 rounded-full">
-                    <Award className="text-gold-500" size={24} />
+                <div className="bg-blue-500/20 p-3 rounded-full">
+                    <Send className="text-blue-500" size={24} />
                 </div>
                 <div>
-                    <h2 className="text-xl font-semibold text-white tracking-tight">Emettre un Certificat</h2>
-                    <p className="text-sm text-slate-500">Reserve aux certificateurs agrees</p>
+                    <h2 className="text-xl font-semibold text-white tracking-tight">Demander une Certification</h2>
+                    <p className="text-sm text-slate-500">Soumettez votre montre pour expertise</p>
                 </div>
             </div>
 
@@ -239,7 +232,7 @@ export const IssueCertificateForm = () => {
                             className={clsx(
                                 "p-4 rounded-xl border-2 transition-all text-center",
                                 formData.certType === key
-                                    ? "border-gold-500 bg-gold-500/10"
+                                    ? "border-blue-500 bg-blue-500/10"
                                     : "border-white/10 bg-white/5 hover:border-white/20"
                             )}
                         >
@@ -253,13 +246,13 @@ export const IssueCertificateForm = () => {
                 {/* Image Upload */}
                 <div className="space-y-2">
                     <label className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <ImageIcon size={12} /> Photo de la montre (optionnel)
+                        <ImageIcon size={12} /> Photo de la montre (Recommande)
                     </label>
 
                     {!imagePreview ? (
                         <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-gold-500/50 transition-colors"
+                            className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/50 transition-colors"
                         >
                             <Upload className="mx-auto mb-3 text-slate-500" size={32} />
                             <p className="text-sm text-slate-400">Cliquez pour selectionner une image</p>
@@ -309,7 +302,7 @@ export const IssueCertificateForm = () => {
                             onChange={handleChange}
                             placeholder="ROLEX-SUB-123456"
                             required
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                     </div>
 
@@ -324,7 +317,7 @@ export const IssueCertificateForm = () => {
                             onChange={handleChange}
                             placeholder="Rolex"
                             required
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                     </div>
 
@@ -339,7 +332,7 @@ export const IssueCertificateForm = () => {
                             onChange={handleChange}
                             placeholder="Submariner Date"
                             required
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                     </div>
 
@@ -354,22 +347,7 @@ export const IssueCertificateForm = () => {
                             onChange={handleChange}
                             placeholder="15000"
                             required
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
-                        />
-                    </div>
-
-                    <div className="col-span-2 space-y-2">
-                        <label className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <User size={12} /> Adresse du Proprietaire (Wallet Solana)
-                        </label>
-                        <input
-                            type="text"
-                            name="ownerAddress"
-                            value={formData.ownerAddress}
-                            onChange={handleChange}
-                            placeholder="7xKHj...3Ks"
-                            required
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white font-mono text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         />
                     </div>
                 </div>
@@ -377,8 +355,8 @@ export const IssueCertificateForm = () => {
                 {/* Fee Info */}
                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center">
                     <div>
-                        <div className="text-xs text-slate-500 uppercase">Frais de certification</div>
-                        <div className="text-lg font-bold text-gold-500">{selectedType.feeLabel}</div>
+                        <div className="text-xs text-slate-500 uppercase">Frais a payer</div>
+                        <div className="text-lg font-bold text-blue-500">{selectedType.feeLabel}</div>
                     </div>
                     <div className="text-right">
                         <div className="text-xs text-slate-500 uppercase">Type selectionne</div>
@@ -405,7 +383,7 @@ export const IssueCertificateForm = () => {
                 <button
                     type="submit"
                     disabled={loading || !publicKey}
-                    className="w-full luxury-button !py-4 !text-base flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="w-full luxury-button !py-4 !text-base flex items-center justify-center gap-3 disabled:opacity-50 !bg-blue-600 hover:!bg-blue-700"
                 >
                     {loading ? (
                         <>
@@ -414,8 +392,8 @@ export const IssueCertificateForm = () => {
                         </>
                     ) : (
                         <>
-                            <Award size={20} />
-                            Emettre le Certificat
+                            <Send size={20} />
+                            Envoyer la Demande (Paiement)
                         </>
                     )}
                 </button>
