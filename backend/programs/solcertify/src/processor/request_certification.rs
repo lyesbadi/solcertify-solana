@@ -5,7 +5,8 @@ use crate::errors::ErrorCode;
 use crate::RequestCertification;
 
 /// Handler pour soumettre une demande de certification
-/// L'utilisateur paie les frais upfront, qui seront distribues lors de l'approbation
+/// L'utilisateur paie les frais upfront et choisit un certificateur spécifique
+/// Le certificateur cible voit sa charge incrémentée
 pub fn handler(
     ctx: Context<RequestCertification>,
     serial_number: String,
@@ -14,6 +15,7 @@ pub fn handler(
     cert_type: CertificationType,
     estimated_value: u64,
     metadata_uri: String,
+    target_certifier: Pubkey, // Certificateur choisi par le demandeur
 ) -> Result<()> {
     let clock = Clock::get()?;
 
@@ -35,6 +37,12 @@ pub fn handler(
         ErrorCode::MetadataUriTooLong
     );
 
+    // Vérifier que le certificateur est dans la liste des agréés
+    require!(
+        ctx.accounts.authority.is_approved_certifier(&target_certifier),
+        ErrorCode::UnauthorizedCertifier
+    );
+
     // Calculer les frais
     let fee = cert_type.get_fee();
 
@@ -51,7 +59,11 @@ pub fn handler(
         fee,
     )?;
 
-    // Initialiser la demande
+    // Incrémenter la charge du certificateur cible
+    let certifier_profile = &mut ctx.accounts.certifier_profile;
+    certifier_profile.increment_load()?;
+
+    // Initialiser la demande avec le certificateur assigné
     let request = &mut ctx.accounts.request;
     request.requester = ctx.accounts.requester.key();
     request.serial_number = serial_number.clone();
@@ -61,7 +73,7 @@ pub fn handler(
     request.estimated_value = estimated_value;
     request.metadata_uri = metadata_uri;
     request.status = RequestStatus::Pending;
-    request.assigned_certifier = None;
+    request.assigned_certifier = Some(target_certifier); // ASSIGNATION OBLIGATOIRE
     request.rejection_reason = String::new();
     request.created_at = clock.unix_timestamp;
     request.resolved_at = 0;
@@ -69,6 +81,7 @@ pub fn handler(
     request.bump = ctx.bumps.request;
 
     msg!("Certification request created for: {}", serial_number);
+    msg!("Assigned to certifier: {}", target_certifier);
     msg!("Fee paid: {} lamports", fee);
 
     Ok(())

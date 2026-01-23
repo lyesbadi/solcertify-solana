@@ -11,7 +11,7 @@ mod processor;
 pub mod state;
 
 // Reexporter les types pour l'IDL
-pub use state::{CertificationType, RequestStatus};
+pub use state::{CertificationType, RequestStatus, CertifierProfile};
 
 // ID du programme
 declare_id!("FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee");
@@ -27,9 +27,14 @@ pub mod solcertify {
         processor::initialize::handler(ctx)
     }
 
-    /// Ajoute un certificateur agree
-    pub fn add_certifier(ctx: Context<AddCertifier>, certifier: Pubkey) -> Result<()> {
-        processor::add_certifier::handler(ctx, certifier)
+    /// Ajoute un certificateur agree avec son profil
+    pub fn add_certifier(
+        ctx: Context<AddCertifier>, 
+        certifier: Pubkey,
+        display_name: String,
+        physical_address: String,
+    ) -> Result<()> {
+        processor::add_certifier::handler(ctx, certifier, display_name, physical_address)
     }
 
     /// Retire un certificateur de la liste des agrees
@@ -71,7 +76,7 @@ pub mod solcertify {
     // ==================== NOUVELLES INSTRUCTIONS ====================
 
     /// Soumet une demande de certification (utilisateur)
-    /// L'utilisateur paie les frais upfront
+    /// L'utilisateur paie les frais upfront et choisit un certificateur
     pub fn request_certification(
         ctx: Context<RequestCertification>,
         serial_number: String,
@@ -80,6 +85,7 @@ pub mod solcertify {
         cert_type: CertificationType,
         estimated_value: u64,
         metadata_uri: String,
+        target_certifier: Pubkey, // NOUVEAU: Certificateur choisi
     ) -> Result<()> {
         processor::request_certification::handler(
             ctx,
@@ -89,6 +95,7 @@ pub mod solcertify {
             cert_type,
             estimated_value,
             metadata_uri,
+            target_certifier,
         )
     }
 
@@ -108,7 +115,7 @@ pub mod solcertify {
 // ==================== ACCOUNTS STRUCTS ====================
 
 use crate::errors::ErrorCode;
-use crate::state::{Certificate, CertificationAuthority, CertificationRequest, UserActivity};
+use crate::state::{Certificate, CertificationAuthority, CertificationRequest, UserActivity, MAX_CONCURRENT_REQUESTS};
 
 /// Structure retournee lors de la verification d'un certificat
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -152,6 +159,7 @@ pub struct Initialize<'info> {
 
 // === AddCertifier ===
 #[derive(Accounts)]
+#[instruction(certifier: Pubkey)]
 pub struct AddCertifier<'info> {
     #[account(
         mut,
@@ -165,6 +173,18 @@ pub struct AddCertifier<'info> {
         bump = authority.bump
     )]
     pub authority: Account<'info, CertificationAuthority>,
+
+    /// Profil du nouveau certificateur - créé lors de l'ajout
+    #[account(
+        init,
+        payer = admin,
+        space = CertifierProfile::SPACE,
+        seeds = [b"certifier_profile", certifier.as_ref()],
+        bump
+    )]
+    pub certifier_profile: Account<'info, CertifierProfile>,
+
+    pub system_program: Program<'info, System>,
 }
 
 // === RemoveCertifier ===
@@ -284,7 +304,7 @@ pub struct VerifyCertificate<'info> {
 
 // === RequestCertification ===
 #[derive(Accounts)]
-#[instruction(serial_number: String)]
+#[instruction(serial_number: String, _brand: String, _model: String, _cert_type: CertificationType, _estimated_value: u64, _metadata_uri: String, target_certifier: Pubkey)]
 pub struct RequestCertification<'info> {
     #[account(mut)]
     pub requester: Signer<'info>,
@@ -303,6 +323,16 @@ pub struct RequestCertification<'info> {
         bump
     )]
     pub request: Account<'info, CertificationRequest>,
+
+    /// Profil du certificateur cible - vérifie qu'il peut accepter des demandes
+    #[account(
+        mut,
+        seeds = [b"certifier_profile", target_certifier.as_ref()],
+        bump = certifier_profile.bump,
+        constraint = certifier_profile.is_active @ ErrorCode::CertifierNotActive,
+        constraint = certifier_profile.current_load < MAX_CONCURRENT_REQUESTS @ ErrorCode::CertifierAtCapacity
+    )]
+    pub certifier_profile: Account<'info, CertifierProfile>,
 
     /// CHECK: Treasury pour recevoir les frais
     #[account(
@@ -352,6 +382,14 @@ pub struct ApproveCertification<'info> {
     )]
     pub owner_activity: Account<'info, UserActivity>,
 
+    /// Profil du certificateur pour mettre à jour ses stats
+    #[account(
+        mut,
+        seeds = [b"certifier_profile", certifier.key().as_ref()],
+        bump = certifier_profile.bump
+    )]
+    pub certifier_profile: Account<'info, CertifierProfile>,
+
     /// CHECK: Treasury qui detient les frais
     #[account(
         mut,
@@ -380,6 +418,14 @@ pub struct RejectCertification<'info> {
         bump = request.bump
     )]
     pub request: Account<'info, CertificationRequest>,
+
+    /// Profil du certificateur pour mettre à jour ses stats
+    #[account(
+        mut,
+        seeds = [b"certifier_profile", certifier.key().as_ref()],
+        bump = certifier_profile.bump
+    )]
+    pub certifier_profile: Account<'info, CertifierProfile>,
 
     /// CHECK: Requester pour recevoir le remboursement
     #[account(

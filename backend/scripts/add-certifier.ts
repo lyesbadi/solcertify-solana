@@ -1,9 +1,9 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
+import { PublicKey, Keypair } from "@solana/web3.js";
+import * as fs from 'fs';
 
 async function main() {
-    // Configure the client to use the local cluster.
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
 
@@ -23,23 +23,48 @@ async function main() {
         process.exit(1);
     }
 
+    // CHARGEMENT DE LA VRAIE CLÉ ADMIN DES TESTS
+    // Si le fichier n'existe pas, on fallback sur le provider wallet
+    let adminKeypair: Keypair | undefined;
+    try {
+        const keyData = JSON.parse(fs.readFileSync('tests/keypairs/admin.json', 'utf-8'));
+        adminKeypair = Keypair.fromSecretKey(new Uint8Array(keyData));
+        console.log(`Admin chargé (fichier de test): ${adminKeypair.publicKey.toBase58()}`);
+    } catch (e) {
+        console.log("Fichier admin.json non trouvé, utilisation du wallet provider par défaut.");
+    }
+
     console.log(`Ajout du certificateur: ${certifierPubkey.toBase58()}...`);
 
-    // Use the same seed as in lib.rs and frontend
     const [authorityPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("auth_v5")],
         program.programId
     );
 
     try {
-        // @ts-ignore
-        const tx = await (program.methods as any)
-            .addCertifier(certifierPubkey)
-            .accounts({
-                admin: provider.wallet.publicKey,
-                authority: authorityPda,
-            })
-            .rpc();
+        let tx;
+        if (adminKeypair) {
+            // Si on a la clé admin spécifique
+            // @ts-ignore
+            tx = await (program.methods as any)
+                .addCertifier(certifierPubkey)
+                .accounts({
+                    admin: adminKeypair.publicKey,
+                    authority: authorityPda,
+                })
+                .signers([adminKeypair])
+                .rpc();
+        } else {
+            // Sinon on utilise le provider (pour un admin frais)
+            // @ts-ignore
+            tx = await (program.methods as any)
+                .addCertifier(certifierPubkey)
+                .accounts({
+                    admin: provider.wallet.publicKey,
+                    authority: authorityPda,
+                })
+                .rpc();
+        }
 
         console.log("Succès ! Certificateur ajouté avec succès.");
         console.log(`Signature: ${tx}`);

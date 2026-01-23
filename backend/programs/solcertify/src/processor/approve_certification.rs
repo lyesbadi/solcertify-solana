@@ -7,8 +7,8 @@ use crate::ApproveCertification;
 const CERTIFIER_SHARE_PERCENT: u64 = 60;
 
 /// Handler pour approuver une demande de certification
-/// Le certificateur valide la montre et le certificat est emis
-/// Les frais sont distribues : 60% certificateur, 40% plateforme
+/// SEUL le certificateur assigné peut approuver cette demande
+/// Les frais sont distribués : 60% certificateur, 40% plateforme
 pub fn handler(ctx: Context<ApproveCertification>) -> Result<()> {
     let clock = Clock::get()?;
 
@@ -23,6 +23,8 @@ pub fn handler(ctx: Context<ApproveCertification>) -> Result<()> {
     let metadata_uri = ctx.accounts.request.metadata_uri.clone();
     let request_status = ctx.accounts.request.status.clone();
     let owner_cert_count = ctx.accounts.owner_activity.certificate_count;
+    let assigned_certifier = ctx.accounts.request.assigned_certifier;
+    let created_at = ctx.accounts.request.created_at;
 
     // Verifier que la demande est en attente
     require!(
@@ -30,7 +32,13 @@ pub fn handler(ctx: Context<ApproveCertification>) -> Result<()> {
         ErrorCode::RequestNotPending
     );
 
-    // Verifier que le certificateur est agree
+    // NOUVELLE VERIFICATION: Seul le certificateur ASSIGNÉ peut approuver
+    require!(
+        assigned_certifier == Some(ctx.accounts.certifier.key()),
+        ErrorCode::NotAssignedCertifier
+    );
+
+    // Verifier que le certificateur est toujours agrée (sécurité)
     require!(
         ctx.accounts.authority.approved_certifiers.contains(&ctx.accounts.certifier.key()),
         ErrorCode::UnauthorizedCertifier
@@ -90,14 +98,19 @@ pub fn handler(ctx: Context<ApproveCertification>) -> Result<()> {
         crate::state::CertificationType::Exceptional => authority.exceptional_count += 1,
     }
 
+    // Mettre à jour les stats du profil certificateur
+    let certifier_profile = &mut ctx.accounts.certifier_profile;
+    let processing_time = (clock.unix_timestamp - created_at) as u64;
+    certifier_profile.resolve_request(processing_time)?;
+
     // Marquer la demande comme approuvee
     let request = &mut ctx.accounts.request;
     request.status = RequestStatus::Approved;
-    request.assigned_certifier = Some(ctx.accounts.certifier.key());
     request.resolved_at = clock.unix_timestamp;
 
     msg!("Certification approved for: {}", serial_number);
     msg!("Certifier received: {} lamports", certifier_share);
+    msg!("Processing time: {} seconds", processing_time);
 
     Ok(())
 }
