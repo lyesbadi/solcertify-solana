@@ -32,7 +32,7 @@ CLAUDE.md
 SPECIFICATION.md
 PHASES.md
 DOCKER.md
-NEXT_SESSION_PLAN.md
+
 # OS
 Thumbs.db
 .DS_Store
@@ -46,3 +46,8 @@ Cargo.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# output for debugging
+
+test_output.txt
