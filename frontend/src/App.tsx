@@ -8,7 +8,7 @@ import { CertifierDashboard } from './components/CertifierDashboard';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useSolCertify } from './hooks/useSolCertify';
 import { PublicKey } from '@solana/web3.js';
-import { Fingerprint, Search, ShieldCheck, Watch, Award, Send } from 'lucide-react';
+import { Fingerprint, Search, ShieldCheck, Watch, Award, Send, LayoutDashboard } from 'lucide-react';
 import { clsx } from 'clsx';
 
 type TabType = 'verify' | 'my-watches' | 'certify';
@@ -28,8 +28,19 @@ function App() {
             try {
                 const [authorityPda] = getAuthorityPda();
                 const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
-                const certifiers = authority.certifiers as PublicKey[];
+
+                console.log("🔍 [DEBUG] Objet Authority COMPLET:", authority);
+
+                // FIXED: Use approvedCertifiers based on runtime logs
+                const certifiersRaw = authority.approvedCertifiers || authority.certifiers || [];
+                const certifiers = certifiersRaw as PublicKey[];
+
+                console.log("🔍 [DEBUG] Certificateurs autorisés:", certifiers.map(c => c.toString()));
+                console.log("👤 [DEBUG] Ton Wallet:", publicKey.toString());
+
                 const isAuth = certifiers.some(c => c.toString() === publicKey.toString());
+                console.log("✅ [DEBUG] Est Certificateur ?", isAuth);
+
                 setIsCertifier(isAuth);
             } catch (e) {
                 console.error("Error checking certifier:", e);
@@ -79,8 +90,8 @@ function App() {
                                 activeTab === 'certify' ? "bg-gold-gradient text-white shadow-gold-glow" : "text-slate-400 hover:text-white"
                             )}
                         >
-                            {isCertifier ? <Award size={16} /> : <Send size={16} />}
-                            {isCertifier ? 'Espace Certificateur' : 'Demander Certification'}
+                            {isCertifier ? <LayoutDashboard size={16} /> : <Send size={16} />}
+                            {isCertifier ? 'Espace Certif.' : 'Demander Certif.'}
                         </button>
                     </div>
                 </div>

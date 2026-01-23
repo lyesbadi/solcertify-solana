@@ -27,14 +27,17 @@
 
 /* Le bouton principal de connexion dans la Navbar */
 .wallet-adapter-button {
-  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+  background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%) !important;
+  /* Plus lumineux */
   font-family: 'Outfit', sans-serif !important;
   font-weight: 600 !important;
   border-radius: 0.5rem !important;
   transition: all 0.3s ease !important;
-  color: white !important;
+  color: #000 !important;
+  /* Texte noir sur fond or pour contraste */
   height: 40px !important;
   padding: 0 24px !important;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3) !important;
 }
 
 .wallet-adapter-button:not([disabled]):hover {
