@@ -33,6 +33,58 @@ interface CertificationRequest {
     };
 }
 
+// Subcomponent to fetch image from Metadata JSON
+const MetadataImage = ({ uri }: { uri: string }) => {
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchImage = async () => {
+            if (!uri) {
+                setLoading(false);
+                return;
+            }
+
+            // Convert any IPFS uri to gateway
+            const gatewayUrl = uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
+
+            // If it looks like a direct image link
+            if (gatewayUrl.match(/\.(jpeg|jpg|gif|png)$/) != null) {
+                setImageUrl(gatewayUrl);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                // Otherwise assume it's a JSON metadata file
+                const res = await fetch(gatewayUrl);
+                const json = await res.json();
+                if (json.image) {
+                    setImageUrl(json.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/'));
+                }
+            } catch (e) {
+                console.error("Error loading metadata image", e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchImage();
+    }, [uri]);
+
+    if (loading) return <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-600" size={16} /></div>;
+
+    if (!imageUrl) return <Watch className="text-slate-600" />;
+
+    return (
+        <img
+            src={imageUrl}
+            alt="Watch"
+            className="w-full h-full object-cover transition-opacity duration-500"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+    );
+};
+
 export const CertifierDashboard = () => {
     const { program, getAuthorityPda, getUserActivityPda, getCertificatePda } = useSolCertify();
     const { publicKey } = useWallet();
@@ -171,13 +223,13 @@ export const CertifierDashboard = () => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => setFilter('pending')}
-                        className={clsx("px-4 py-2 rounded-lg text-sm transition-colors", filter === 'pending' ? "bg-gold-500 text-black" : "bg-white/5 text-slate-400 hover:bg-white/10")}
+                        className={clsx("px-4 py-2 rounded-lg text-sm transition-colors", filter === 'pending' ? "bg-gold-500 text-black shadow-gold-glow" : "bg-white/5 text-slate-400 hover:bg-white/10")}
                     >
                         En Attente
                     </button>
                     <button
                         onClick={() => setFilter('history')}
-                        className={clsx("px-4 py-2 rounded-lg text-sm transition-colors", filter === 'history' ? "bg-gold-500 text-black" : "bg-white/5 text-slate-400 hover:bg-white/10")}
+                        className={clsx("px-4 py-2 rounded-lg text-sm transition-colors", filter === 'history' ? "bg-gold-500 text-black shadow-gold-glow" : "bg-white/5 text-slate-400 hover:bg-white/10")}
                     >
                         Historique
                     </button>
@@ -209,16 +261,7 @@ export const CertifierDashboard = () => {
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex items-center gap-4">
                                     <div className="w-16 h-16 bg-black/40 rounded-lg flex items-center justify-center overflow-hidden">
-                                        {req.account.metadataUri.startsWith('ipfs://') ? (
-                                            <img
-                                                src={`https://gateway.pinata.cloud/ipfs/${req.account.metadataUri.replace('ipfs://', '')}`}
-                                                alt="Watch"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                                            />
-                                        ) : (
-                                            <Watch className="text-slate-600" />
-                                        )}
+                                        <MetadataImage uri={req.account.metadataUri} />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
