@@ -48,6 +48,13 @@ export function useSolCertify() {
         );
     };
 
+    const getCertifierProfilePda = (certifier: PublicKey) => {
+        return PublicKey.findProgramAddressSync(
+            [Buffer.from("certifier_profile"), certifier.toBuffer()],
+            PROGRAM_ID
+        );
+    };
+
     return {
         program,
         PROGRAM_ID,
@@ -55,6 +62,7 @@ export function useSolCertify() {
         getCertificatePda,
         getUserActivityPda,
         getRequestPda,
+        getCertifierProfilePda,
         wallet,
         connection
     };

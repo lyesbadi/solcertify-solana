@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSolCertify } from '../hooks/useSolCertify';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
 import {
     CheckCircle,
     XCircle,
@@ -86,7 +86,7 @@ const MetadataImage = ({ uri }: { uri: string }) => {
 };
 
 export const CertifierDashboard = () => {
-    const { program, getAuthorityPda, getUserActivityPda, getCertificatePda } = useSolCertify();
+    const { program, getAuthorityPda, getUserActivityPda, getCertificatePda, getCertifierProfilePda } = useSolCertify();
     const { publicKey } = useWallet();
 
     const [requests, setRequests] = useState<CertificationRequest[]>([]);
@@ -99,14 +99,43 @@ export const CertifierDashboard = () => {
     const [rejectReason, setRejectReason] = useState('');
     const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
 
+    // Filter logic update
+    const [isAdmin, setIsAdmin] = useState(false);
+
     const fetchRequests = async () => {
-        if (!program) return;
+        if (!program || !publicKey) return;
         setLoading(true);
         try {
+            // Check if current user is admin
+            const [authorityPda] = getAuthorityPda();
+            const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
+            const adminKey = authority.admin as PublicKey;
+            const isUserAdmin = adminKey.toString() === publicKey.toString();
+            setIsAdmin(isUserAdmin);
+
             const allRequests = await (program.account as any).certificationRequest.all();
 
+            // Filter requests:
+            // 1. If Admin: See ALL requests
+            // 2. If Certifier: See ONLY requests assigned to ME (or unassigned/free-for-all if that logic existed)
+            // Current Logic V2: Requests MUST be assigned. So filtered by assignedCertifier === publicKey.
+
+            const relevantRequests = allRequests.filter((req: any) => {
+                const assigned = req.account.assignedCertifier;
+
+                // If admin, show everything
+                if (isUserAdmin) return true;
+
+                // If regular certifier, show only assigned to me
+                if (assigned && assigned.toString() === publicKey.toString()) {
+                    return true;
+                }
+
+                return false;
+            });
+
             // Sort by date desc
-            const sorted = allRequests.sort((a: any, b: any) =>
+            const sorted = relevantRequests.sort((a: any, b: any) =>
                 b.account.createdAt.toNumber() - a.account.createdAt.toNumber()
             );
 
@@ -131,6 +160,16 @@ export const CertifierDashboard = () => {
             const [certificatePda] = getCertificatePda(request.account.serialNumber);
             const [ownerActivityPda] = getUserActivityPda(request.account.requester);
 
+            // Need certifier profile to update stats
+            // NOTE: In V2, the certifier signer MUST be the assigned certifier.
+            // If Admin is forcing approval, they must be the assigned certifier OR the contract allows admin override (which our contract does NOT currently explicitely allow for 'approve', only 'admin' role in init/add/remove). 
+            // WAIT - 'approve_certification' checks `constraint = request.assigned_certifier == certifier.key()`.
+            // So ONLY the assigned certifier can approve. Even Admin cannot approve if not assigned.
+
+            // We need the CertifierProfile PDA to update stats
+            // The currently connected user IS the certifier (checked by constraint)
+            const [certifierProfilePda] = getCertifierProfilePda(publicKey);
+
             // Fetch authority to get treasury
             const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
             const treasuryPubkey = authority.treasury;
@@ -139,12 +178,13 @@ export const CertifierDashboard = () => {
                 .approveCertification()
                 .accounts({
                     certifier: publicKey,
+                    certifierProfile: certifierProfilePda, // Added in V2
                     request: request.publicKey,
                     authority: authorityPda,
                     certificate: certificatePda,
                     ownerActivity: ownerActivityPda,
                     treasury: treasuryPubkey,
-                    systemProgram: PublicKey.default // Will be resolved by Anchor
+                    systemProgram: SystemProgram.programId // Use explicitly imported/resolved SystemProgram if available, or rely on Anchor default
                 })
                 .rpc();
 
@@ -166,15 +206,22 @@ export const CertifierDashboard = () => {
 
         try {
             const [authorityPda] = getAuthorityPda();
+            // Rejection also updates stats now? No, rejection just frees up the slot.
+            // Wait, yes, reject_certification decrement current_load in V2?
+            // Let's check the rust code... It calls `certifier_profile.current_load -= 1`.
+            // So we NEED certifierProfile account.
+
+            const [certifierProfilePda] = getCertifierProfilePda(publicKey);
 
             const tx = await (program.methods as any)
                 .rejectCertification(rejectReason)
                 .accounts({
                     certifier: publicKey,
+                    certifierProfile: certifierProfilePda, // Added in V2
                     request: request.publicKey,
                     requester: request.account.requester,
                     authority: authorityPda,
-                    systemProgram: PublicKey.default
+                    systemProgram: SystemProgram.programId
                 })
                 .rpc();
 
@@ -217,7 +264,14 @@ export const CertifierDashboard = () => {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-white">Tableau de Bord Certificateur</h2>
+                    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                        Tableau de Bord Certificateur
+                        {isAdmin && (
+                            <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider font-bold shadow-red-glow">
+                                Admin Mode
+                            </span>
+                        )}
+                    </h2>
                     <p className="text-sm text-slate-500">Gerez les demandes de certification entrantes</p>
                 </div>
                 <div className="flex gap-2">
