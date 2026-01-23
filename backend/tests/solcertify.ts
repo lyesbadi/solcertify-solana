@@ -80,6 +80,20 @@ describe("solcertify", () => {
     );
   }
 
+  function getCertifierProfilePda(certifier: PublicKey): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("certifier_profile"), certifier.toBuffer()],
+      program.programId
+    );
+  }
+
+  function getRequestPda(serialNumber: string): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("request"), Buffer.from(serialNumber)],
+      program.programId
+    );
+  }
+
   before(async () => {
     console.log("Programme ID:", program.programId.toBase58());
 
@@ -156,26 +170,49 @@ describe("solcertify", () => {
 
   describe("Tests de base - Gestion des certificateurs", () => {
     it("Ajoute un certificateur agréé", async () => {
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
+
       await program.methods
-        .addCertifier(certifier.publicKey)
+        .addCertifier(
+          certifier.publicKey,
+          "Horlogerie Paris", // display_name
+          "123 Rue de la Paix, 75001 Paris" // physical_address
+        )
         .accounts({
           admin: admin.publicKey,
           authority: authorityPda,
+          certifierProfile: certifierProfilePda,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([admin])
         .rpc();
 
       const authority = await program.account.certificationAuthority.fetch(authorityPda);
       expect(authority.approvedCertifiers).to.have.lengthOf(1);
-      console.log("Certificateur ajouté");
+
+      // Vérifier le profil créé
+      const profile = await program.account.certifierProfile.fetch(certifierProfilePda);
+      expect(profile.displayName).to.equal("Horlogerie Paris");
+      expect(profile.isActive).to.be.true;
+      expect(profile.currentLoad).to.equal(0);
+
+      console.log("Certificateur ajouté avec profil");
     });
 
     it("Ajoute un deuxième certificateur", async () => {
+      const [certifierProfile2Pda] = getCertifierProfilePda(certifier2.publicKey);
+
       await program.methods
-        .addCertifier(certifier2.publicKey)
+        .addCertifier(
+          certifier2.publicKey,
+          "Horlogerie Lyon",
+          "456 Place Bellecour, 69002 Lyon"
+        )
         .accounts({
           admin: admin.publicKey,
           authority: authorityPda,
+          certifierProfile: certifierProfile2Pda,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([admin])
         .rpc();
@@ -496,19 +533,29 @@ describe("solcertify", () => {
     });
 
     it("Vérifie qu'un certificateur ne peut pas être ajouté en double", async () => {
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
+
       try {
         await program.methods
-          .addCertifier(certifier.publicKey)
+          .addCertifier(
+            certifier.publicKey,
+            "Duplicate Name",
+            "Duplicate Address"
+          )
           .accounts({
             admin: admin.publicKey,
             authority: authorityPda,
+            certifierProfile: certifierProfilePda,
+            systemProgram: anchor.web3.SystemProgram.programId,
           })
           .signers([admin])
           .rpc();
 
-        expect.fail("Devrait lever une erreur CertifierAlreadyExists");
+        expect.fail("Devrait lever une erreur CertifierAlreadyExists ou account already in use");
       } catch (err: any) {
-        expect(err.toString()).to.include("CertifierAlreadyExists");
+        // Peut être CertifierAlreadyExists OU "already in use" car le profil PDA existe déjà
+        const errStr = err.toString();
+        expect(errStr.includes("CertifierAlreadyExists") || errStr.includes("already in use")).to.be.true;
         console.log("Erreur attendue: certificateur déjà dans la liste");
       }
     });
@@ -615,6 +662,7 @@ describe("solcertify", () => {
 
     it("Utilisateur soumet une demande de certification", async () => {
       const [requestPda] = getRequestPda(requestSerial1);
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
 
       await program.methods
         .requestCertification(
@@ -623,12 +671,14 @@ describe("solcertify", () => {
           "Speedmaster",
           { premium: {} },
           new anchor.BN(12000),
-          "ipfs://QmTestMetadata123"
+          "ipfs://QmTestMetadata123",
+          certifier.publicKey // target_certifier - le certificateur choisi
         )
         .accounts({
           requester: owner1.publicKey,
           authority: authorityPda,
           request: requestPda,
+          certifierProfile: certifierProfilePda,
           treasury: treasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -643,8 +693,13 @@ describe("solcertify", () => {
       expect(request.model).to.equal("Speedmaster");
       expect(request.status.pending).to.exist;
       expect(request.feePaid.toNumber()).to.be.greaterThan(0);
+      expect(request.assignedCertifier.toString()).to.equal(certifier.publicKey.toString());
 
-      console.log("Demande de certification soumise avec succes");
+      // Vérifier que la charge du certificateur a été incrémentée
+      const profile = await program.account.certifierProfile.fetch(certifierProfilePda);
+      expect(profile.currentLoad).to.equal(1);
+
+      console.log("Demande de certification soumise avec succes, assignée à:", certifier.publicKey.toBase58());
       console.log("Frais payes:", request.feePaid.toString(), "lamports");
     });
 
@@ -652,9 +707,14 @@ describe("solcertify", () => {
       const [requestPda] = getRequestPda(requestSerial1);
       const [certificatePda] = getCertificatePda(requestSerial1);
       const [ownerActivityPda] = getUserActivityPda(owner1.publicKey);
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
 
       // Recuperer le solde du certificateur avant
       const certifierBalanceBefore = await provider.connection.getBalance(certifier.publicKey);
+
+      // Récupérer la charge avant
+      const profileBefore = await program.account.certifierProfile.fetch(certifierProfilePda);
+      const loadBefore = profileBefore.currentLoad;
 
       await program.methods
         .approveCertification()
@@ -664,6 +724,7 @@ describe("solcertify", () => {
           request: requestPda,
           certificate: certificatePda,
           ownerActivity: ownerActivityPda,
+          certifierProfile: certifierProfilePda,
           treasury: treasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -681,18 +742,24 @@ describe("solcertify", () => {
       expect(certificate.owner.toString()).to.equal(owner1.publicKey.toString());
       expect(certificate.certifier.toString()).to.equal(certifier.publicKey.toString());
 
+      // Vérifier que la charge a été décrémentée
+      const profileAfter = await program.account.certifierProfile.fetch(certifierProfilePda);
+      expect(profileAfter.currentLoad).to.equal(loadBefore - 1);
+      expect(profileAfter.totalProcessed.toNumber()).to.be.greaterThan(0);
+
       // Verifier que le certificateur a recu sa part (60%)
       const certifierBalanceAfter = await provider.connection.getBalance(certifier.publicKey);
-      // Le certificateur devrait avoir gagne des lamports (moins les frais de tx)
       console.log("Certificateur balance avant:", certifierBalanceBefore);
       console.log("Certificateur balance apres:", certifierBalanceAfter);
+      console.log("Charge actuelle du certificateur:", profileAfter.currentLoad);
 
       console.log("Demande approuvee et certificat cree");
     });
 
     it("Echec approbation par non-certificateur", async () => {
-      // D'abord creer une nouvelle demande
+      // D'abord creer une nouvelle demande assignée au certificateur légitime
       const [requestPda] = getRequestPda(requestSerial2);
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
 
       await program.methods
         .requestCertification(
@@ -701,23 +768,28 @@ describe("solcertify", () => {
           "Santos",
           { luxury: {} },
           new anchor.BN(25000),
-          "ipfs://QmTestMetadata456"
+          "ipfs://QmTestMetadata456",
+          certifier.publicKey // assigné au bon certificateur
         )
         .accounts({
           requester: owner3.publicKey,
           authority: authorityPda,
           request: requestPda,
+          certifierProfile: certifierProfilePda,
           treasury: treasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([owner3])
         .rpc();
 
-      // Essayer d'approuver avec un non-certificateur
+      // Essayer d'approuver avec un non-certificateur (devrait échouer)
       const [certificatePda] = getCertificatePda(requestSerial2);
       const [ownerActivityPda] = getUserActivityPda(owner3.publicKey);
+      // Note: le non-autorisé n'a pas de profile, donc on ne peut pas fournir un account valide
+      // Le test va échouer pour "account not found" ou "not assigned certifier"
 
       try {
+        // On utilise le profile du vrai certificateur mais signe avec unauthorized
         await program.methods
           .approveCertification()
           .accounts({
@@ -726,14 +798,16 @@ describe("solcertify", () => {
             request: requestPda,
             certificate: certificatePda,
             ownerActivity: ownerActivityPda,
+            certifierProfile: certifierProfilePda, // wrong certifier trying to use
             treasury: treasury.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
           })
           .signers([unauthorized])
           .rpc();
 
-        expect.fail("Devrait lever une erreur UnauthorizedCertifier");
+        expect.fail("Devrait lever une erreur");
       } catch (err: any) {
+        // Peut être NotAssignedCertifier, UnauthorizedCertifier, ou ConstraintSeeds
         expect(err).to.exist;
         console.log("Erreur attendue: non-certificateur ne peut pas approuver");
       }
@@ -742,6 +816,7 @@ describe("solcertify", () => {
     it("Certificateur rejette une demande avec remboursement", async () => {
       // Creer une demande a rejeter
       const [requestPda] = getRequestPda(requestSerial3);
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
 
       // Solde avant du demandeur
       const requesterBalanceBefore = await provider.connection.getBalance(owner1.publicKey);
@@ -753,12 +828,14 @@ describe("solcertify", () => {
           "Watch",
           { standard: {} },
           new anchor.BN(1000),
-          "ipfs://QmFakeWatch"
+          "ipfs://QmFakeWatch",
+          certifier.publicKey // target_certifier
         )
         .accounts({
           requester: owner1.publicKey,
           authority: authorityPda,
           request: requestPda,
+          certifierProfile: certifierProfilePda,
           treasury: treasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -768,13 +845,14 @@ describe("solcertify", () => {
       const requestBefore = await program.account.certificationRequest.fetch(requestPda);
       const feePaid = requestBefore.feePaid.toNumber();
 
-      // Rejeter la demande
+      // Rejeter la demande (seul le certificateur assigné peut rejeter)
       await program.methods
         .rejectCertification("Authenticite non verifiable - photos insuffisantes")
         .accounts({
           certifier: certifier.publicKey,
           authority: authorityPda,
           request: requestPda,
+          certifierProfile: certifierProfilePda,
           requester: owner1.publicKey,
           treasury: treasury.publicKey,
         })
@@ -800,6 +878,7 @@ describe("solcertify", () => {
       const [requestPda] = getRequestPda(requestSerial2);
       const [certificatePda] = getCertificatePda(requestSerial2);
       const [ownerActivityPda] = getUserActivityPda(owner3.publicKey);
+      const [certifierProfilePda] = getCertifierProfilePda(certifier.publicKey);
 
       await program.methods
         .approveCertification()
@@ -809,6 +888,7 @@ describe("solcertify", () => {
           request: requestPda,
           certificate: certificatePda,
           ownerActivity: ownerActivityPda,
+          certifierProfile: certifierProfilePda,
           treasury: treasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
@@ -819,8 +899,8 @@ describe("solcertify", () => {
       expect(certificate.serialNumber).to.equal(requestSerial2);
       console.log("Deuxieme demande approuvee");
     });
-  });
 
+  });
   // ==================== RÉSUMÉ ====================
   describe("Résumé final", () => {
     it("Affiche les statistiques finales", async () => {
