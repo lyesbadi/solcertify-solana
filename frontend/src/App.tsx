@@ -8,7 +8,7 @@ import { CertifierDashboard } from './components/CertifierDashboard';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useSolCertify } from './hooks/useSolCertify';
 import { PublicKey } from '@solana/web3.js';
-import { Fingerprint, Search, ShieldCheck, Watch, Award, Send, LayoutDashboard } from 'lucide-react';
+import { Fingerprint, Search, ShieldCheck, Watch, Send, LayoutDashboard } from 'lucide-react';
 import { clsx } from 'clsx';
 
 type TabType = 'verify' | 'my-watches' | 'certify';
@@ -29,17 +29,21 @@ function App() {
                 const [authorityPda] = getAuthorityPda();
                 const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
 
-                console.log("🔍 [DEBUG] Objet Authority COMPLET:", authority);
+                console.log("[DEBUG] Objet Authority COMPLET:", authority);
 
-                // FIXED: Use approvedCertifiers based on runtime logs
                 const certifiersRaw = authority.approvedCertifiers || authority.certifiers || [];
                 const certifiers = certifiersRaw as PublicKey[];
+                const admin = authority.admin as PublicKey;
 
-                console.log("🔍 [DEBUG] Certificateurs autorisés:", certifiers.map(c => c.toString()));
-                console.log("👤 [DEBUG] Ton Wallet:", publicKey.toString());
+                console.log("[DEBUG] Certificateurs autorisés:", certifiers.map(c => c.toString()));
+                console.log("[DEBUG] Admin:", admin.toString());
+                console.log("[DEBUG] Ton Wallet:", publicKey.toString());
 
-                const isAuth = certifiers.some(c => c.toString() === publicKey.toString());
-                console.log("✅ [DEBUG] Est Certificateur ?", isAuth);
+                // Allow if user is an approved certifier OR the global admin
+                const isAuth = certifiers.some(c => c.toString() === publicKey.toString()) ||
+                    admin.toString() === publicKey.toString();
+
+                console.log("[DEBUG] Accès Dashboard autorisé ?", isAuth);
 
                 setIsCertifier(isAuth);
             } catch (e) {

@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSolCertify } from '../hooks/useSolCertify';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { SystemProgram } from '@solana/web3.js';
+import { SystemProgram, PublicKey } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import {
     Loader2,
@@ -14,7 +14,8 @@ import {
     Upload,
     Image as ImageIcon,
     X,
-    Send
+    Send,
+    UserCheck
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { uploadImage, createMetadata } from '../services/ipfs';
@@ -60,8 +61,16 @@ const CERT_TYPES: Record<CertificationType, CertTypeInfo> = {
     },
 };
 
+interface CertifierInfo {
+    publicKey: PublicKey;
+    displayName: string;
+    physicalAddress: string;
+    currentLoad: number;
+    totalProcessed: number;
+}
+
 export const RequestCertificationForm = () => {
-    const { program, getAuthorityPda, getRequestPda } = useSolCertify();
+    const { program, getAuthorityPda, getRequestPda, getCertifierProfilePda } = useSolCertify();
     const { publicKey } = useWallet();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,7 +80,12 @@ export const RequestCertificationForm = () => {
         model: '',
         certType: 'standard' as CertificationType,
         estimatedValue: '',
+        targetCertifier: '', // User selection
     });
+
+    // Certifiers
+    const [certifiers, setCertifiers] = useState<CertifierInfo[]>([]);
+    const [loadingCertifiers, setLoadingCertifiers] = useState(true);
 
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -81,6 +95,57 @@ export const RequestCertificationForm = () => {
     const [success, setSuccess] = useState('');
     const [error, setError] = useState('');
     const [step, setStep] = useState<'idle' | 'uploading' | 'metadata' | 'blockchain'>('idle');
+
+    // Fetch certifiers on mount
+    useEffect(() => {
+        const fetchCertifiers = async () => {
+            if (!program) return;
+            try {
+                const [authorityPda] = getAuthorityPda();
+                const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
+
+                // Get list of authorized pubkeys
+                const approvedKeys = authority.approvedCertifiers as PublicKey[];
+
+                // Fetch profiles for each
+                const profiles: CertifierInfo[] = [];
+                for (const key of approvedKeys) {
+                    const [profilePda] = getCertifierProfilePda(key);
+                    try {
+                        const profile = await (program.account as any).certifierProfile.fetch(profilePda);
+                        profiles.push({
+                            publicKey: key,
+                            displayName: profile.displayName,
+                            physicalAddress: profile.physicalAddress,
+                            currentLoad: profile.currentLoad,
+                            totalProcessed: profile.totalProcessed.toNumber() // u64 to number
+                        });
+                    } catch (e) {
+                        console.warn(`Profile not found for ${key.toString()}`, e);
+                        // Fallback if profile missing (should not happen in prod)
+                        profiles.push({
+                            publicKey: key,
+                            displayName: `Certif. ${key.toString().slice(0, 4)}`,
+                            physicalAddress: "N/A",
+                            currentLoad: 0,
+                            totalProcessed: 0
+                        });
+                    }
+                }
+                setCertifiers(profiles);
+                // Pre-select the first one (or the one with lowest load later)
+                if (profiles.length > 0) {
+                    setFormData(prev => ({ ...prev, targetCertifier: profiles[0].publicKey.toString() }));
+                }
+            } catch (err) {
+                console.error("Error fetching certifiers:", err);
+            } finally {
+                setLoadingCertifiers(false);
+            }
+        };
+
+        fetchCertifiers();
+    }, [program, getAuthorityPda, getCertifierProfilePda]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -113,6 +178,11 @@ export const RequestCertificationForm = () => {
         e.preventDefault();
         if (!program || !publicKey) return;
 
+        if (!formData.targetCertifier) {
+            setError("Veuillez selectionner un certificateur.");
+            return;
+        }
+
         setLoading(true);
         setError('');
         setSuccess('');
@@ -130,6 +200,9 @@ export const RequestCertificationForm = () => {
 
             // Step 2: Create metadata on IPFS
             setStep('metadata');
+            const targetPubkey = new PublicKey(formData.targetCertifier);
+            const selectedCertifierInfo = certifiers.find(c => c.publicKey.toString() === formData.targetCertifier);
+
             const metadataResult = await createMetadata({
                 serialNumber: formData.serialNumber,
                 brand: formData.brand,
@@ -137,8 +210,8 @@ export const RequestCertificationForm = () => {
                 certType: formData.certType,
                 estimatedValue: parseInt(formData.estimatedValue),
                 imageUri: imageUri || undefined,
-                owner: publicKey.toBase58(), // Requester is owner
-                certifier: "Pending" // Not assigned yet
+                owner: publicKey.toBase58(),
+                certifier: selectedCertifierInfo?.displayName || "Unknown"
             });
 
             metadataUri = metadataResult.metadataUri;
@@ -147,12 +220,14 @@ export const RequestCertificationForm = () => {
             setStep('blockchain');
             const [authorityPda] = getAuthorityPda();
             const [requestPda] = getRequestPda(formData.serialNumber);
+            const [certifierProfilePda] = getCertifierProfilePda(targetPubkey);
 
             const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
             const treasuryPubkey = authority.treasury;
 
             const certTypeArg = { [formData.certType]: {} };
 
+            // NEW: includes targetCertifier arg and certifierProfile account
             const tx = await (program.methods as any)
                 .requestCertification(
                     formData.serialNumber,
@@ -160,12 +235,14 @@ export const RequestCertificationForm = () => {
                     formData.model,
                     certTypeArg,
                     new BN(parseInt(formData.estimatedValue)),
-                    metadataUri
+                    metadataUri,
+                    targetPubkey // Argument added in V2 logic
                 )
                 .accounts({
                     requester: publicKey,
                     authority: authorityPda,
                     request: requestPda,
+                    certifierProfile: certifierProfilePda, // Added account
                     treasury: treasuryPubkey,
                     systemProgram: SystemProgram.programId,
                 })
@@ -174,19 +251,25 @@ export const RequestCertificationForm = () => {
             setSuccess(`Demande envoyee avec succes ! TX: ${tx.slice(0, 16)}...`);
 
             // Reset form
-            setFormData({
+            setFormData(prev => ({
+                ...prev,
                 serialNumber: '',
                 brand: '',
                 model: '',
-                certType: 'standard',
+                // Keep type and certifier
                 estimatedValue: '',
-            });
+            }));
             handleRemoveImage();
+
+            // Allow user to see success message for a bit, then reset state if needed?
+            // For now keep as is.
 
         } catch (err: any) {
             console.error('Erreur demande certification:', err);
             if (err.message?.includes('RequestAlreadyExists')) {
                 setError('Une demande existe deja pour ce numero de serie.');
+            } else if (err.message?.includes('CertifierAtCapacity')) {
+                setError('Ce certificateur est surcharge. Veuillez en choisir un autre.');
             } else if (err.message?.includes('SerialNumberTooLong')) {
                 setError('Numero de serie trop long.');
             } else {
@@ -199,6 +282,7 @@ export const RequestCertificationForm = () => {
     };
 
     const selectedType = CERT_TYPES[formData.certType];
+    const selectedCertifier = certifiers.find(c => c.publicKey.toString() === formData.targetCertifier);
 
     const getStepLabel = () => {
         switch (step) {
@@ -222,6 +306,62 @@ export const RequestCertificationForm = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+
+                {/* Certifier Selection */}
+                <div className="space-y-3">
+                    <label className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <UserCheck size={12} /> Choix du Certificateur (Expert)
+                    </label>
+
+                    {loadingCertifiers ? (
+                        <div className="text-slate-500 text-sm animate-pulse">Chargement des experts...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {certifiers.map((cert) => (
+                                <div
+                                    key={cert.publicKey.toString()}
+                                    onClick={() => setFormData(prev => ({ ...prev, targetCertifier: cert.publicKey.toString() }))}
+                                    className={clsx(
+                                        "cursor-pointer p-4 rounded-xl border border-white/10 transition-all hover:bg-white/5 relative",
+                                        formData.targetCertifier === cert.publicKey.toString()
+                                            ? "bg-blue-500/10 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                                            : "bg-white/5"
+                                    )}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h4 className="font-semibold text-white">{cert.displayName}</h4>
+                                        {cert.currentLoad >= 10 && (
+                                            <span className="text-[10px] bg-red-500/20 text-red-500 px-2 py-0.5 rounded-full">SATURE</span>
+                                        )}
+                                    </div>
+                                    <div className="space-y-1 text-xs text-slate-400">
+                                        <div className="flex justify-between">
+                                            <span>Adresse:</span>
+                                            <span className="text-white truncate max-w-[150px]">{cert.physicalAddress}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Traités:</span>
+                                            <span className="text-blue-400 font-mono">{cert.totalProcessed}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Charge:</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={clsx("h-full rounded-full", cert.currentLoad > 8 ? "bg-red-500" : "bg-green-500")}
+                                                        style={{ width: `${(cert.currentLoad / 10) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span>{cert.currentLoad}/10</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
                 {/* Type Selection */}
                 <div className="grid grid-cols-4 gap-3">
                     {(Object.entries(CERT_TYPES) as [CertificationType, CertTypeInfo][]).map(([key, info]) => (
@@ -358,6 +498,12 @@ export const RequestCertificationForm = () => {
                         <div className="text-xs text-slate-500 uppercase">Frais a payer</div>
                         <div className="text-lg font-bold text-blue-500">{selectedType.feeLabel}</div>
                     </div>
+                    {selectedCertifier && (
+                        <div className="text-center md:text-left mx-4 hidden md:block">
+                            <div className="text-xs text-slate-500 uppercase">Expert choisi</div>
+                            <div className="text-sm font-semibold text-white">{selectedCertifier.displayName}</div>
+                        </div>
+                    )}
                     <div className="text-right">
                         <div className="text-xs text-slate-500 uppercase">Type selectionne</div>
                         <div className="text-lg font-semibold text-white">{selectedType.label}</div>
@@ -382,7 +528,7 @@ export const RequestCertificationForm = () => {
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading || !publicKey}
+                    disabled={loading || !publicKey || !formData.targetCertifier}
                     className="w-full luxury-button !py-4 !text-base flex items-center justify-center gap-3 disabled:opacity-50 !bg-blue-600 hover:!bg-blue-700"
                 >
                     {loading ? (
