@@ -6,6 +6,7 @@
 // - UserActivity : Activite d'un utilisateur (cooldown + compteur)
 // - CertificationType : Enum des types de certification
 // - CertificationRequest : Demande de certification en attente
+// - CertifierProfile : Profil et statistiques d'un certificateur
 // - constants : Constantes du programme
 
 pub mod constants;
@@ -14,6 +15,7 @@ pub mod authority;
 pub mod certificate;
 pub mod user_activity;
 pub mod certification_request;
+pub mod certifier_profile;
 
 pub use constants::*;
 pub use certification_type::*;
@@ -21,4 +23,5 @@ pub use authority::*;
 pub use certificate::*;
 pub use user_activity::*;
 pub use certification_request::*;
+pub use certifier_profile::*;
 

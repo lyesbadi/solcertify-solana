@@ -1,0 +1,1444 @@
+{
+  "address": "FGgYzSL6kTGm2D9UZPCtoGZZykiHZKWUnAUxZiPeXEee",
+  "metadata": {
+    "name": "solcertify",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "addCertifier",
+      "discriminator": [
+        162,
+        165,
+        198,
+        251,
+        36,
+        67,
+        56,
+        209
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "certifierProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "certifier"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "certifier",
+          "type": "pubkey"
+        },
+        {
+          "name": "displayName",
+          "type": "string"
+        },
+        {
+          "name": "physicalAddress",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "removeCertifier",
+      "discriminator": [
+        55,
+        47,
+        28,
+        234,
+        40,
+        118,
+        252,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "certifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "issueCertificate",
+      "discriminator": [
+        61,
+        197,
+        55,
+        28,
+        159,
+        18,
+        132,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "certifier",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "certificate",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "serialNumber"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownerActivity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  97,
+                  99,
+                  116,
+                  105,
+                  118,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "serialNumber",
+          "type": "string"
+        },
+        {
+          "name": "brand",
+          "type": "string"
+        },
+        {
+          "name": "model",
+          "type": "string"
+        },
+        {
+          "name": "certType",
+          "type": {
+            "defined": {
+              "name": "CertificationType"
+            }
+          }
+        },
+        {
+          "name": "estimatedValue",
+          "type": "u64"
+        },
+        {
+          "name": "metadataUri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "transferCertificate",
+      "discriminator": [
+        0,
+        215,
+        102,
+        104,
+        210,
+        244,
+        186,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "from",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "to"
+        },
+        {
+          "name": "certificate",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "certificate.serial_number"
+              }
+            ]
+          }
+        },
+        {
+          "name": "fromActivity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  97,
+                  99,
+                  116,
+                  105,
+                  118,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "from"
+              }
+            ]
+          }
+        },
+        {
+          "name": "toActivity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  97,
+                  99,
+                  116,
+                  105,
+                  118,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "to"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "verifyCertificate",
+      "discriminator": [
+        85,
+        168,
+        68,
+        192,
+        185,
+        249,
+        46,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "certificate",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "certificate.serial_number"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [],
+      "returns": {
+        "defined": {
+          "name": "CertificateInfo"
+        }
+      }
+    },
+    {
+      "name": "requestCertification",
+      "discriminator": [
+        46,
+        128,
+        197,
+        242,
+        175,
+        38,
+        9,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "requester",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "serialNumber"
+              }
+            ]
+          }
+        },
+        {
+          "name": "certifierProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "targetCertifier"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "serialNumber",
+          "type": "string"
+        },
+        {
+          "name": "brand",
+          "type": "string"
+        },
+        {
+          "name": "model",
+          "type": "string"
+        },
+        {
+          "name": "certType",
+          "type": {
+            "defined": {
+              "name": "CertificationType"
+            }
+          }
+        },
+        {
+          "name": "estimatedValue",
+          "type": "u64"
+        },
+        {
+          "name": "metadataUri",
+          "type": "string"
+        },
+        {
+          "name": "targetCertifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "approveCertification",
+      "discriminator": [
+        212,
+        208,
+        101,
+        97,
+        229,
+        54,
+        70,
+        101
+      ],
+      "accounts": [
+        {
+          "name": "certifier",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "request.serial_number"
+              }
+            ]
+          }
+        },
+        {
+          "name": "certificate",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  99,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "request.serial_number"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ownerActivity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  97,
+                  99,
+                  116,
+                  105,
+                  118,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "request.requester"
+              }
+            ]
+          }
+        },
+        {
+          "name": "certifierProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "certifier"
+              }
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "rejectCertification",
+      "discriminator": [
+        154,
+        136,
+        114,
+        101,
+        200,
+        14,
+        125,
+        75
+      ],
+      "accounts": [
+        {
+          "name": "certifier",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  95,
+                  118,
+                  53
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  113,
+                  117,
+                  101,
+                  115,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "request.serial_number"
+              }
+            ]
+          }
+        },
+        {
+          "name": "certifierProfile",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  101,
+                  114,
+                  116,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114,
+                  95,
+                  112,
+                  114,
+                  111,
+                  102,
+                  105,
+                  108,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "certifier"
+              }
+            ]
+          }
+        },
+        {
+          "name": "requester",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CertificationAuthority",
+      "discriminator": [
+        90,
+        105,
+        68,
+        133,
+        190,
+        41,
+        253,
+        212
+      ]
+    },
+    {
+      "name": "CertifierProfile",
+      "discriminator": [
+        39,
+        228,
+        108,
+        65,
+        48,
+        14,
+        56,
+        154
+      ]
+    },
+    {
+      "name": "CertificationRequest",
+      "discriminator": [
+        235,
+        99,
+        166,
+        69,
+        173,
+        176,
+        212,
+        50
+      ]
+    },
+    {
+      "name": "Certificate",
+      "discriminator": [
+        202,
+        229,
+        222,
+        220,
+        116,
+        20,
+        74,
+        67
+      ]
+    },
+    {
+      "name": "UserActivity",
+      "discriminator": [
+        95,
+        186,
+        70,
+        188,
+        153,
+        44,
+        179,
+        37
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnauthorizedCertifier",
+      "msg": "Le certificateur n'est pas agree."
+    },
+    {
+      "code": 6001,
+      "name": "StringTooLong",
+      "msg": "Chaine de caracteres trop longue."
+    },
+    {
+      "code": 6002,
+      "name": "MaxCertificatesReached",
+      "msg": "Nombre maximum de certificats atteint pour cet utilisateur."
+    },
+    {
+      "code": 6003,
+      "name": "CooldownNotElapsed",
+      "msg": "Periode de refroidissement non ecoulee."
+    },
+    {
+      "code": 6004,
+      "name": "CertificateLocked",
+      "msg": "Le certificat est verrouille pour le transfert."
+    },
+    {
+      "code": 6005,
+      "name": "NotOwner",
+      "msg": "Seul le proprietaire peut effectuer cette action."
+    },
+    {
+      "code": 6006,
+      "name": "MaxCertifiersReached",
+      "msg": "Nombre maximum de certificateurs atteint."
+    },
+    {
+      "code": 6007,
+      "name": "CertifierNotFound",
+      "msg": "Le certificateur n'existe pas dans la liste."
+    },
+    {
+      "code": 6008,
+      "name": "CertifierAlreadyExists",
+      "msg": "Le certificateur est deja agree."
+    },
+    {
+      "code": 6009,
+      "name": "DisplayNameTooLong",
+      "msg": "Le nom d'affichage est trop long (max 50 caracteres)."
+    },
+    {
+      "code": 6010,
+      "name": "PhysicalAddressTooLong",
+      "msg": "L'adresse physique est trop longue (max 100 caracteres)."
+    },
+    {
+      "code": 6011,
+      "name": "RequestNotPending",
+      "msg": "La demande n'est pas en attente."
+    },
+    {
+      "code": 6012,
+      "name": "RejectionReasonTooLong",
+      "msg": "La raison du rejet est trop longue."
+    },
+    {
+      "code": 6013,
+      "name": "InsufficientFunds",
+      "msg": "Fonds insuffisants pour payer les frais."
+    },
+    {
+      "code": 6014,
+      "name": "CertifierNotActive",
+      "msg": "Le certificateur n'est pas actif."
+    },
+    {
+      "code": 6015,
+      "name": "CertifierAtCapacity",
+      "msg": "Le certificateur a atteint sa capacite maximale de demandes."
+    },
+    {
+      "code": 6016,
+      "name": "NotAssignedCertifier",
+      "msg": "Seul le certificateur assigne peut traiter cette demande."
+    }
+  ],
+  "types": [
+    {
+      "name": "CertificationAuthority",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "approvedCertifiers",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "totalIssued",
+            "type": "u64"
+          },
+          {
+            "name": "standardCount",
+            "type": "u64"
+          },
+          {
+            "name": "premiumCount",
+            "type": "u64"
+          },
+          {
+            "name": "luxuryCount",
+            "type": "u64"
+          },
+          {
+            "name": "exceptionalCount",
+            "type": "u64"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CertifierProfile",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "certifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "currentLoad",
+            "type": "u16"
+          },
+          {
+            "name": "totalProcessed",
+            "type": "u64"
+          },
+          {
+            "name": "totalProcessingTime",
+            "type": "u64"
+          },
+          {
+            "name": "physicalAddress",
+            "type": "string"
+          },
+          {
+            "name": "displayName",
+            "type": "string"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "registeredAt",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CertificationRequest",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "requester",
+            "type": "pubkey"
+          },
+          {
+            "name": "serialNumber",
+            "type": "string"
+          },
+          {
+            "name": "brand",
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "type": "string"
+          },
+          {
+            "name": "certType",
+            "type": {
+              "defined": {
+                "name": "CertificationType"
+              }
+            }
+          },
+          {
+            "name": "estimatedValue",
+            "type": "u64"
+          },
+          {
+            "name": "metadataUri",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "RequestStatus"
+              }
+            }
+          },
+          {
+            "name": "assignedCertifier",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "rejectionReason",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "resolvedAt",
+            "type": "i64"
+          },
+          {
+            "name": "feePaid",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Certificate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "serialNumber",
+            "type": "string"
+          },
+          {
+            "name": "brand",
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "type": "string"
+          },
+          {
+            "name": "certType",
+            "type": {
+              "defined": {
+                "name": "CertificationType"
+              }
+            }
+          },
+          {
+            "name": "estimatedValue",
+            "type": "u64"
+          },
+          {
+            "name": "metadataUri",
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "certifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "lastTransferAt",
+            "type": "i64"
+          },
+          {
+            "name": "lockedUntil",
+            "type": "i64"
+          },
+          {
+            "name": "previousOwners",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserActivity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "lastActionAt",
+            "type": "i64"
+          },
+          {
+            "name": "certificateCount",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CertificationType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Standard"
+          },
+          {
+            "name": "Premium"
+          },
+          {
+            "name": "Luxury"
+          },
+          {
+            "name": "Exceptional"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Approved"
+          },
+          {
+            "name": "Rejected"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CertificateInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "serialNumber",
+            "type": "string"
+          },
+          {
+            "name": "brand",
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "type": "string"
+          },
+          {
+            "name": "certType",
+            "type": "u8"
+          },
+          {
+            "name": "estimatedValue",
+            "type": "u64"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "certifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "metadataUri",
+            "type": "string"
+          },
+          {
+            "name": "createdAt",
+            "type": "i64"
+          },
+          {
+            "name": "lastTransferAt",
+            "type": "i64"
+          },
+          {
+            "name": "lockedUntil",
+            "type": "i64"
+          },
+          {
+            "name": "isLocked",
+            "type": "bool"
+          },
+          {
+            "name": "previousOwnersCount",
+            "type": "u8"
+          },
+          {
+            "name": "totalCertificatesIssued",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

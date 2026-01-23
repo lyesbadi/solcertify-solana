@@ -56,5 +56,21 @@ pub enum ErrorCode {
 
     #[msg("Une demande existe deja pour ce numero de serie")]
     RequestAlreadyExists,
+
+    // Codes d'erreur pour le système d'assignation de certificateur
+    #[msg("Le certificateur n'est pas actif")]
+    CertifierNotActive,
+
+    #[msg("Le certificateur a atteint sa capacite maximale de demandes")]
+    CertifierAtCapacity,
+
+    #[msg("Seul le certificateur assigne peut traiter cette demande")]
+    NotAssignedCertifier,
+
+    #[msg("L'adresse physique est trop longue (max 200 caracteres)")]
+    PhysicalAddressTooLong,
+
+    #[msg("Le nom d'affichage est trop long (max 50 caracteres)")]
+    DisplayNameTooLong,
 }
 
