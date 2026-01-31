@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libudev-dev \
     git \
+    bc \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Installer Solana CLI
@@ -18,20 +20,26 @@ ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 # Installer Anchor CLI
 RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
 
+# Installer Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
 # Créer le répertoire de l'application
 WORKDIR /app
 
 # Copier les fichiers du projet
-COPY Cargo.toml ./
+COPY Cargo.toml Cargo.lock ./
 COPY Anchor.toml ./
 COPY programs ./programs
 COPY tests ./tests
+COPY scripts ./scripts
 COPY package.json package-lock.json tsconfig.json ./
 
-# Installer les dépendances Node.js pour les tests
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install
+# Copier les fichiers .env si présents
+COPY .env* ./
+
+# Installer les dépendances Node.js
+RUN npm install
 
 # Configurer Solana pour localhost
 RUN solana config set --url localhost && \
@@ -40,7 +48,10 @@ RUN solana config set --url localhost && \
 # Exposer les ports
 EXPOSE 8899 8900 9900
 
-# Script de démarrage
+# Rendre les scripts exécutables
+RUN chmod +x scripts/*.sh
+
+# Script de démarrage utilisant full_pipeline.sh
 COPY docker/start-backend.sh /start-backend.sh
 RUN chmod +x /start-backend.sh
 

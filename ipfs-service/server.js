@@ -119,6 +119,66 @@ app.post('/api/upload/image', upload.single('file'), async (req, res) => {
 });
 
 /**
+ * POST /api/upload/images
+ * Upload plusieurs images vers IPFS (max 5)
+ */
+app.post('/api/upload/images', upload.array('files', 5), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'Aucun fichier fourni' });
+        }
+
+        const files = req.files;
+        const results = [];
+
+        for (const file of files) {
+            // Mode simulation si Pinata non configuré
+            if (!pinata) {
+                const fakeHash = `Qm${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}Sim`;
+                console.log(`[SIMULATION] Image uploadee: ${file.originalname}`);
+                results.push({
+                    success: true,
+                    simulated: true,
+                    hash: fakeHash,
+                    url: `https://ipfs.io/ipfs/${fakeHash}`,
+                    gatewayUrl: `https://gateway.pinata.cloud/ipfs/${fakeHash}`,
+                    filename: file.originalname,
+                    size: file.size
+                });
+            } else {
+                // Upload réel vers Pinata
+                const pinataFile = new File([file.buffer], file.originalname, {
+                    type: file.mimetype
+                });
+                const result = await pinata.upload.file(pinataFile);
+                console.log(`Image uploadee: ${result.IpfsHash}`);
+                results.push({
+                    success: true,
+                    hash: result.IpfsHash,
+                    url: `https://ipfs.io/ipfs/${result.IpfsHash}`,
+                    gatewayUrl: `https://${process.env.PINATA_GATEWAY || 'gateway.pinata.cloud'}/ipfs/${result.IpfsHash}`,
+                    filename: file.originalname,
+                    size: file.size
+                });
+            }
+        }
+
+        console.log(`${results.length} images uploadees`);
+
+        res.json({
+            success: true,
+            simulated: !pinata,
+            count: results.length,
+            images: results
+        });
+
+    } catch (error) {
+        console.error(' Erreur upload images:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * POST /api/metadata/create
  * Crée et upload les métadonnées JSON d'un certificat
  */
@@ -130,7 +190,8 @@ app.post('/api/metadata/create', async (req, res) => {
             model,
             certType,
             estimatedValue,
-            imageUri,
+            imageUri,        // Single image (backward compat)
+            imageUris,       // Array of images (new)
             owner,
             certifier,
             reference,
@@ -146,12 +207,17 @@ app.post('/api/metadata/create', async (req, res) => {
             });
         }
 
+        // Handle images array - use imageUris if provided, else fallback to single imageUri
+        const allImages = imageUris || (imageUri ? [imageUri] : []);
+        const primaryImage = allImages[0] || '';
+
         // Construction des métadonnées au format NFT standard
         const metadata = {
             name: `${brand} ${model}`,
             symbol: 'SOLCERT',
             description: `Certificat d'authenticité SolCertify pour ${brand} ${model}`,
-            image: imageUri || '',
+            image: primaryImage,  // Primary image for NFT display
+            images: allImages,    // All images array
             external_url: `https://solcertify.io/verify/${serialNumber}`,
             attributes: [
                 { trait_type: 'Brand', value: brand },
@@ -162,6 +228,7 @@ app.post('/api/metadata/create', async (req, res) => {
                 { trait_type: 'Year', value: year || 'Unknown' },
                 { trait_type: 'Condition', value: condition || 'Unknown' },
                 { trait_type: 'Reference', value: reference || 'N/A' },
+                { trait_type: 'Image Count', value: allImages.length.toString() },
             ],
             properties: {
                 serialNumber,
@@ -174,6 +241,7 @@ app.post('/api/metadata/create', async (req, res) => {
                 certifier: certifier || '',
                 expertiseReport: expertiseReport || '',
                 certificationFee: getCertificationFee(certType),
+                images: allImages,  // Store all images in properties too
                 createdAt: new Date().toISOString()
             }
         };
@@ -348,9 +416,10 @@ app.listen(PORT, () => {
     console.log('══════════════════════════════════════════════');
     console.log('');
     console.log(' Endpoints disponibles:');
-    console.log(`   GET  /health              - Health check`);
-    console.log(`   POST /api/upload/image    - Upload image`);
-    console.log(`   POST /api/metadata/create - Create metadata`);
+    console.log(`   GET  /health               - Health check`);
+    console.log(`   POST /api/upload/image     - Upload single image`);
+    console.log(`   POST /api/upload/images    - Upload multiple images (max 5)`);
+    console.log(`   POST /api/metadata/create  - Create metadata`);
     console.log(`   POST /api/certificate/full - Full certificate`);
     console.log('');
     console.log(` http://localhost:${PORT}/health`);
