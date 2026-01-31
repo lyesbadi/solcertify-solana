@@ -98,18 +98,27 @@ describe("solcertify", () => {
     console.log("Programme ID:", program.programId.toBase58());
 
     // Générer les keypairs - Persister les acteurs clés via .env
-    const adminPath = process.env.ADMIN_KEYPAIR || './tests/keypairs/admin.json';
-    const treasuryPath = process.env.TREASURY_KEYPAIR || './tests/keypairs/treasury.json';
-    const certifierPath = process.env.CERTIFIER_KEYPAIR || './tests/keypairs/certifier.json';
-    const certifier2Path = process.env.CERTIFIER2_KEYPAIR || './tests/keypairs/certifier2.json';
+    const adminPath = process.env.ADMIN_KEYPAIR || 'tests/keypairs/admin.json';
+    const treasuryPath = process.env.TREASURY_KEYPAIR || 'tests/keypairs/treasury.json';
+    const certifierPath = process.env.CERTIFIER_KEYPAIR || 'tests/keypairs/certifier1.json';
+    const certifier2Path = process.env.CERTIFIER2_KEYPAIR || 'tests/keypairs/certifier2.json';
+    const ownerPath = process.env.OWNER_KEYPAIR || 'tests/keypairs/demandeur.json';
 
     admin = loadOrGenerateKeypair(adminPath);
-    treasury = loadOrGenerateKeypair(treasuryPath);
-    certifier = loadOrGenerateKeypair(certifierPath);
-    certifier2 = loadOrGenerateKeypair(certifier2Path);
+    console.log("Admin Loaded:", admin.publicKey.toBase58());
 
-    // Les utilisateurs peuvent rester éphémères
-    owner1 = Keypair.generate();
+    treasury = loadOrGenerateKeypair(treasuryPath);
+
+    certifier = loadOrGenerateKeypair(certifierPath);
+    console.log("Certifier 1 Loaded:", certifier.publicKey.toBase58());
+
+    certifier2 = loadOrGenerateKeypair(certifier2Path);
+    console.log("Certifier 2 Loaded:", certifier2.publicKey.toBase58());
+
+    owner1 = loadOrGenerateKeypair(ownerPath); // Use real demandeur
+    console.log("Demandeur Loaded:", owner1.publicKey.toBase58());
+
+    // Les utilisateurs secondaires restent éphémères
     owner2 = Keypair.generate();
     unauthorized = Keypair.generate();
 
