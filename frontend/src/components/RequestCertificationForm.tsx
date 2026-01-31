@@ -15,10 +15,12 @@ import {
     Image as ImageIcon,
     X,
     Send,
-    UserCheck
+    UserCheck,
+    Camera,
+    Package
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { uploadImage, createMetadata } from '../services/ipfs';
+import { uploadImages, createMetadata } from '../services/ipfs';
 
 type CertificationType = 'standard' | 'premium' | 'luxury' | 'exceptional';
 
@@ -61,6 +63,14 @@ const CERT_TYPES: Record<CertificationType, CertTypeInfo> = {
     },
 };
 
+// Deduce certificate type from estimated value
+const getCertTypeFromValue = (value: number): CertificationType => {
+    if (value >= 100000) return 'exceptional';
+    if (value >= 20000) return 'luxury';
+    if (value >= 5000) return 'premium';
+    return 'standard';
+};
+
 interface CertifierInfo {
     publicKey: PublicKey;
     displayName: string;
@@ -78,18 +88,19 @@ export const RequestCertificationForm = () => {
         serialNumber: '',
         brand: '',
         model: '',
-        certType: 'standard' as CertificationType,
         estimatedValue: '',
         targetCertifier: '', // User selection
+        certificationMethod: 'remote' as 'remote' | 'physical', // remote (photos) or physical (shipping)
     });
 
     // Certifiers
     const [certifiers, setCertifiers] = useState<CertifierInfo[]>([]);
     const [loadingCertifiers, setLoadingCertifiers] = useState(true);
 
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [imageUri, setImageUri] = useState<string | null>(null);
+    // Multi-image support (max 5)
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [imageUris, setImageUris] = useState<string[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
@@ -133,9 +144,15 @@ export const RequestCertificationForm = () => {
                     }
                 }
                 setCertifiers(profiles);
-                // Pre-select the first one (or the one with lowest load later)
+                // Pre-select the first one ONLY if no certifier is already selected
                 if (profiles.length > 0) {
-                    setFormData(prev => ({ ...prev, targetCertifier: profiles[0].publicKey.toString() }));
+                    setFormData(prev => {
+                        // Only set if empty (user hasn't selected yet)
+                        if (!prev.targetCertifier) {
+                            return { ...prev, targetCertifier: profiles[0].publicKey.toString() };
+                        }
+                        return prev;
+                    });
                 }
             } catch (err) {
                 console.error("Error fetching certifiers:", err);
@@ -153,22 +170,34 @@ export const RequestCertificationForm = () => {
     };
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setImagePreview(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-            setImageUri(null);
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            // Limit to 5 images total
+            const newFiles = Array.from(files).slice(0, 5 - imageFiles.length);
+            setImageFiles(prev => [...prev, ...newFiles].slice(0, 5));
+
+            // Generate previews
+            newFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    setImagePreviews(prev => [...prev, e.target?.result as string].slice(0, 5));
+                };
+                reader.readAsDataURL(file);
+            });
+            setImageUris([]);
         }
     };
 
-    const handleRemoveImage = () => {
-        setImageFile(null);
-        setImagePreview(null);
-        setImageUri(null);
+    const handleRemoveImage = (index: number) => {
+        setImageFiles(prev => prev.filter((_, i) => i !== index));
+        setImagePreviews(prev => prev.filter((_, i) => i !== index));
+        setImageUris(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveAllImages = () => {
+        setImageFiles([]);
+        setImagePreviews([]);
+        setImageUris([]);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -183,6 +212,12 @@ export const RequestCertificationForm = () => {
             return;
         }
 
+        // Require photos for remote certification
+        if (formData.certificationMethod === 'remote' && imageFiles.length === 0) {
+            setError("Veuillez ajouter au moins une photo pour la certification à distance.");
+            return;
+        }
+
         setLoading(true);
         setError('');
         setSuccess('');
@@ -190,12 +225,13 @@ export const RequestCertificationForm = () => {
         try {
             let metadataUri = '';
 
-            // Step 1: Upload image if provided
-            if (imageFile && !imageUri) {
+            // Step 1: Upload images if provided
+            let uploadedUris: string[] = imageUris;
+            if (imageFiles.length > 0 && imageUris.length === 0) {
                 setStep('uploading');
-                const uploadResult = await uploadImage(imageFile);
-                setImageUri(uploadResult.url);
-                metadataUri = `ipfs://${uploadResult.hash}`;
+                const uploadResult = await uploadImages(imageFiles);
+                uploadedUris = uploadResult.images.map(img => `ipfs://${img.hash}`);
+                setImageUris(uploadedUris);
             }
 
             // Step 2: Create metadata on IPFS
@@ -203,13 +239,16 @@ export const RequestCertificationForm = () => {
             const targetPubkey = new PublicKey(formData.targetCertifier);
             const selectedCertifierInfo = certifiers.find(c => c.publicKey.toString() === formData.targetCertifier);
 
+            // Compute cert type from estimated value
+            const certType = getCertTypeFromValue(parseInt(formData.estimatedValue) || 0);
+
             const metadataResult = await createMetadata({
                 serialNumber: formData.serialNumber,
                 brand: formData.brand,
                 model: formData.model,
-                certType: formData.certType,
+                certType: certType,
                 estimatedValue: parseInt(formData.estimatedValue),
-                imageUri: imageUri || undefined,
+                imageUris: uploadedUris.length > 0 ? uploadedUris : undefined,
                 owner: publicKey.toBase58(),
                 certifier: selectedCertifierInfo?.displayName || "Unknown"
             });
@@ -225,7 +264,7 @@ export const RequestCertificationForm = () => {
             const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
             const treasuryPubkey = authority.treasury;
 
-            const certTypeArg = { [formData.certType]: {} };
+            const certTypeArg = { [certType]: {} };
 
             // NEW: includes targetCertifier arg and certifierProfile account
             const tx = await (program.methods as any)
@@ -259,7 +298,7 @@ export const RequestCertificationForm = () => {
                 // Keep type and certifier
                 estimatedValue: '',
             }));
-            handleRemoveImage();
+            handleRemoveAllImages();
 
             // Allow user to see success message for a bit, then reset state if needed?
             // For now keep as is.
@@ -281,12 +320,15 @@ export const RequestCertificationForm = () => {
         }
     };
 
-    const selectedType = CERT_TYPES[formData.certType];
+    // Compute cert type from estimated value (auto-deduced)
+    const estimatedValueNum = parseFloat(formData.estimatedValue) || 0;
+    const deducedCertType = getCertTypeFromValue(estimatedValueNum);
+    const selectedType = CERT_TYPES[deducedCertType];
     const selectedCertifier = certifiers.find(c => c.publicKey.toString() === formData.targetCertifier);
 
     const getStepLabel = () => {
         switch (step) {
-            case 'uploading': return 'Upload image vers IPFS...';
+            case 'uploading': return `Upload ${imageFiles.length} image(s) vers IPFS...`;
             case 'metadata': return 'Creation des metadonnees...';
             case 'blockchain': return 'Envoi de la demande...';
             default: return 'Envoyer la Demande (Paiement)';
@@ -322,7 +364,7 @@ export const RequestCertificationForm = () => {
                                     key={cert.publicKey.toString()}
                                     onClick={() => setFormData(prev => ({ ...prev, targetCertifier: cert.publicKey.toString() }))}
                                     className={clsx(
-                                        "cursor-pointer p-4 rounded-xl border border-white/10 transition-all hover:bg-white/5 relative",
+                                        "cursor-pointer p-4 rounded-xl border border-white/10 transition-all hover:bg-white/5 z-10",
                                         formData.targetCertifier === cert.publicKey.toString()
                                             ? "bg-blue-500/10 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
                                             : "bg-white/5"
@@ -362,61 +404,176 @@ export const RequestCertificationForm = () => {
                     )}
                 </div>
 
-                {/* Type Selection */}
-                <div className="grid grid-cols-4 gap-3">
-                    {(Object.entries(CERT_TYPES) as [CertificationType, CertTypeInfo][]).map(([key, info]) => (
+                {/* Auto-Deduced Type Display */}
+                <div className="space-y-3">
+                    <label className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        Type de Certificat
+                        <span className="text-blue-400 font-normal normal-case">(déduit automatiquement du prix)</span>
+                    </label>
+                    <div className="grid grid-cols-4 gap-3">
+                        {(Object.entries(CERT_TYPES) as [CertificationType, CertTypeInfo][]).map(([key, info]) => (
+                            <div
+                                key={key}
+                                className={clsx(
+                                    "p-4 rounded-xl border-2 transition-all text-center",
+                                    deducedCertType === key
+                                        ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/30"
+                                        : "border-white/10 bg-white/5 opacity-50"
+                                )}
+                            >
+                                <div className={clsx("w-3 h-3 rounded-full mx-auto mb-2", info.color)} />
+                                <div className="text-sm font-semibold text-white">{info.label}</div>
+                                <div className="text-[10px] text-slate-500">{info.description}</div>
+                                <div className="text-[10px] text-gold-500 mt-1">{info.feeLabel}</div>
+                                {deducedCertType === key && (
+                                    <div className="text-[10px] text-blue-400 mt-2 font-semibold">Selectionne</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    {estimatedValueNum > 0 && (
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm flex items-center gap-2">
+                            <div className={clsx("w-3 h-3 rounded-full", selectedType.color)} />
+                            <span className="text-blue-400">
+                                Pour {estimatedValueNum.toLocaleString()} EUR → Certificat <strong>{selectedType.label}</strong> ({selectedType.feeLabel})
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Certification Method Selection */}
+                <div className="space-y-3">
+                    <label className="text-xs text-slate-400 uppercase tracking-wider">
+                        Mode de Certification
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Remote / Photos Option */}
                         <button
-                            key={key}
                             type="button"
-                            onClick={() => setFormData(prev => ({ ...prev, certType: key }))}
+                            onClick={() => setFormData(prev => ({ ...prev, certificationMethod: 'remote' }))}
                             className={clsx(
-                                "p-4 rounded-xl border-2 transition-all text-center",
-                                formData.certType === key
-                                    ? "border-blue-500 bg-blue-500/10"
+                                "p-4 rounded-xl border-2 transition-all text-left",
+                                formData.certificationMethod === 'remote'
+                                    ? "border-green-500 bg-green-500/10"
                                     : "border-white/10 bg-white/5 hover:border-white/20"
                             )}
                         >
-                            <div className={clsx("w-3 h-3 rounded-full mx-auto mb-2", info.color)} />
-                            <div className="text-sm font-semibold text-white">{info.label}</div>
-                            <div className="text-[10px] text-slate-500">{info.feeLabel}</div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={clsx(
+                                    "p-2 rounded-lg",
+                                    formData.certificationMethod === 'remote' ? "bg-green-500/20" : "bg-white/10"
+                                )}>
+                                    <Camera size={20} className={formData.certificationMethod === 'remote' ? "text-green-500" : "text-slate-400"} />
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-white">Photos a distance</div>
+                                    <div className="text-xs text-slate-400">Envoyez vos photos en ligne</div>
+                                </div>
+                            </div>
+                            <ul className="text-[10px] text-slate-500 space-y-1 ml-12">
+                                <li>• Rapide (24-48h)</li>
+                                <li>• Pas de frais d'envoi</li>
+                                <li>• Recommandé pour la plupart des montres</li>
+                            </ul>
                         </button>
-                    ))}
+
+                        {/* Physical Delivery Option */}
+                        <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, certificationMethod: 'physical' }))}
+                            className={clsx(
+                                "p-4 rounded-xl border-2 transition-all text-left",
+                                formData.certificationMethod === 'physical'
+                                    ? "border-amber-500 bg-amber-500/10"
+                                    : "border-white/10 bg-white/5 hover:border-white/20"
+                            )}
+                        >
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={clsx(
+                                    "p-2 rounded-lg",
+                                    formData.certificationMethod === 'physical' ? "bg-amber-500/20" : "bg-white/10"
+                                )}>
+                                    <Package size={20} className={formData.certificationMethod === 'physical' ? "text-amber-500" : "text-slate-400"} />
+                                </div>
+                                <div>
+                                    <div className="font-semibold text-white">Envoi physique</div>
+                                    <div className="text-xs text-slate-400">Envoyez votre montre au certificateur</div>
+                                </div>
+                            </div>
+                            <ul className="text-[10px] text-slate-500 space-y-1 ml-12">
+                                <li>• Expertise approfondie</li>
+                                <li>• Inspection physique complète</li>
+                                <li>• Pour les pièces de haute valeur</li>
+                            </ul>
+                        </button>
+                    </div>
+
+                    {formData.certificationMethod === 'physical' && selectedCertifier && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-sm">
+                            <div className="text-amber-500 font-medium mb-1">Adresse d'envoi:</div>
+                            <div className="text-white">{selectedCertifier.displayName}</div>
+                            <div className="text-slate-400 text-xs">{selectedCertifier.physicalAddress}</div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Image Upload */}
+                {/* Multi-Image Upload - Required for remote, optional for physical */}
                 <div className="space-y-2">
                     <label className="text-xs text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                        <ImageIcon size={12} /> Photo de la montre (Recommande)
+                        <ImageIcon size={12} />
+                        Photos de la montre ({imagePreviews.length}/5)
+                        {formData.certificationMethod === 'remote' ? (
+                            <span className="text-red-400 ml-1">*Requis</span>
+                        ) : (
+                            <span className="text-slate-600 ml-1">(Optionnel)</span>
+                        )}
                     </label>
 
-                    {!imagePreview ? (
+                    {/* Image Gallery Grid */}
+                    <div className="grid grid-cols-5 gap-2">
+                        {imagePreviews.map((preview, index) => (
+                            <div key={index} className="relative aspect-square">
+                                <img
+                                    src={preview}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-lg border border-white/10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="absolute -top-1 -right-1 p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600 transition-colors"
+                                >
+                                    <X size={12} />
+                                </button>
+                                {imageUris[index] && (
+                                    <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5 bg-green-500/80 rounded-b-lg text-[8px] text-white text-center">
+                                        IPFS
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {/* Add More Button (if less than 5) */}
+                        {imagePreviews.length < 5 && (
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="aspect-square border-2 border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-500/50 transition-colors"
+                            >
+                                <Upload className="text-slate-500 mb-1" size={20} />
+                                <span className="text-[10px] text-slate-500">Ajouter</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Empty State */}
+                    {imagePreviews.length === 0 && (
                         <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/50 transition-colors"
+                            className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-blue-500/50 transition-colors"
                         >
                             <Upload className="mx-auto mb-3 text-slate-500" size={32} />
-                            <p className="text-sm text-slate-400">Cliquez pour selectionner une image</p>
-                            <p className="text-xs text-slate-600 mt-1">JPG, PNG ou WebP (max 10MB)</p>
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            <img
-                                src={imagePreview}
-                                alt="Preview"
-                                className="w-full h-48 object-cover rounded-xl border border-white/10"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleRemoveImage}
-                                className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
-                            >
-                                <X size={16} />
-                            </button>
-                            {imageUri && (
-                                <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-500/80 rounded text-xs text-white">
-                                    Uploade sur IPFS
-                                </div>
-                            )}
+                            <p className="text-sm text-slate-400">Cliquez pour selectionner des photos</p>
+                            <p className="text-xs text-slate-600 mt-1">Jusqu'a 5 images (JPG, PNG, WebP - max 10MB chacune)</p>
                         </div>
                     )}
 
@@ -424,6 +581,7 @@ export const RequestCertificationForm = () => {
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
+                        multiple
                         onChange={handleImageSelect}
                         className="hidden"
                     />

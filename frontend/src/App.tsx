@@ -163,30 +163,12 @@ function App() {
                             <p className="text-sm text-slate-500 mb-6 leading-relaxed">
                                 Chaque certificat est unique et immuable. Le numéro de série est lié à jamais à votre identité blockchain.
                             </p>
-                            <div className="w-full space-y-3">
-                                <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-slate-400 p-2 bg-white/5 rounded-lg">
-                                    <span>Réseau</span>
-                                    <span className="text-gold-500 font-mono">Localhost</span>
-                                </div>
+                            <div className="w-full">
                                 <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-slate-400 p-2 bg-white/5 rounded-lg">
                                     <span>Frais Certification</span>
                                     <span className="text-gold-500 font-mono">0.05 - 0.5 SOL</span>
                                 </div>
                             </div>
-                        </div>
-
-                        <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
-                            <h4 className="text-white font-medium text-sm">Prochaines étapes</h4>
-                            <ul className="space-y-3">
-                                <li className="flex gap-3 text-xs text-slate-500">
-                                    <span className="w-5 h-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">✓</span>
-                                    Finaliser l'interface d'émission (Demande & Approbation).
-                                </li>
-                                <li className="flex gap-3 text-xs text-slate-500">
-                                    <span className="w-5 h-5 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">✓</span>
-                                    Intégrer le service IPFS pour les photos haute résolution.
-                                </li>
-                            </ul>
                         </div>
                     </aside>
                 </div>

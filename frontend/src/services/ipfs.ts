@@ -76,6 +76,35 @@ export async function uploadImage(file: File): Promise<UploadImageResponse> {
     return response.json();
 }
 
+export interface UploadImagesResponse {
+    success: boolean;
+    simulated?: boolean;
+    count: number;
+    images: UploadImageResponse[];
+}
+
+/**
+ * Upload plusieurs images vers IPFS (max 5)
+ */
+export async function uploadImages(files: File[]): Promise<UploadImagesResponse> {
+    const formData = new FormData();
+    files.forEach(file => {
+        formData.append('files', file);
+    });
+
+    const response = await fetch(`${IPFS_API_URL}/api/upload/images`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur upload images');
+    }
+
+    return response.json();
+}
+
 /**
  * Cree les metadonnees JSON et les upload sur IPFS
  */
@@ -85,7 +114,8 @@ export async function createMetadata(data: {
     model: string;
     certType: string;
     estimatedValue: number;
-    imageUri?: string;
+    imageUri?: string;      // Single image (backward compat)
+    imageUris?: string[];   // Array of images
     owner?: string;
     certifier?: string;
     reference?: string;

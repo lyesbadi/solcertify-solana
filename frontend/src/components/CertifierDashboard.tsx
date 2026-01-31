@@ -8,8 +8,7 @@ import {
     Clock,
     Loader2,
     Eye,
-    Award,
-    Watch
+    Award
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BN } from '@coral-xyz/anchor';
@@ -33,57 +32,7 @@ interface CertificationRequest {
     };
 }
 
-// Subcomponent to fetch image from Metadata JSON
-const MetadataImage = ({ uri }: { uri: string }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchImage = async () => {
-            if (!uri) {
-                setLoading(false);
-                return;
-            }
-
-            // Convert any IPFS uri to gateway
-            const gatewayUrl = uri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/');
-
-            // If it looks like a direct image link
-            if (gatewayUrl.match(/\.(jpeg|jpg|gif|png)$/) != null) {
-                setImageUrl(gatewayUrl);
-                setLoading(false);
-                return;
-            }
-
-            try {
-                // Otherwise assume it's a JSON metadata file
-                const res = await fetch(gatewayUrl);
-                const json = await res.json();
-                if (json.image) {
-                    setImageUrl(json.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/'));
-                }
-            } catch (e) {
-                console.error("Error loading metadata image", e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchImage();
-    }, [uri]);
-
-    if (loading) return <div className="w-full h-full bg-white/5 animate-pulse flex items-center justify-center"><Loader2 className="animate-spin text-slate-600" size={16} /></div>;
-
-    if (!imageUrl) return <Watch className="text-slate-600" />;
-
-    return (
-        <img
-            src={imageUrl}
-            alt="Watch"
-            className="w-full h-full object-cover transition-opacity duration-500"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
-    );
-};
+import { MetadataGallery } from './MetadataGallery';
 
 export const CertifierDashboard = () => {
     const { program, getAuthorityPda, getUserActivityPda, getCertificatePda, getCertifierProfilePda } = useSolCertify();
@@ -310,122 +259,137 @@ export const CertifierDashboard = () => {
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {filteredRequests.map((req) => (
-                        <div key={req.publicKey.toBase58()} className="bg-white/5 border border-white/10 rounded-xl p-6 transition-all hover:border-white/20">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-16 h-16 bg-black/40 rounded-lg flex items-center justify-center overflow-hidden">
-                                        <MetadataImage uri={req.account.metadataUri} />
+                    {filteredRequests.map((req) => {
+                        const isAssignedToMe = req.account.assignedCertifier?.toString() === publicKey?.toString();
+
+                        return (
+                            <div key={req.publicKey.toBase58()} className="bg-white/5 border border-white/10 rounded-xl p-6 transition-all hover:border-white/20">
+                                {/* Assignment Badge */}
+                                {isAssignedToMe && req.account.status.pending && (
+                                    <div className="mb-4 flex items-center gap-2 text-xs">
+                                        <span className="bg-gold-500/20 text-gold-500 px-2 py-1 rounded-full font-semibold uppercase tracking-wider">
+                                            📥 Assignée à vous
+                                        </span>
+                                        <span className="text-slate-500">— Cette demande nécessite votre attention</span>
                                     </div>
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="font-bold text-white text-lg">{req.account.brand} {req.account.model}</span>
-                                            {getStatusBadge(req.account.status)}
+                                )}
+
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <MetadataGallery uri={req.account.metadataUri} size="md" />
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-white text-lg">{req.account.brand} {req.account.model}</span>
+                                                {getStatusBadge(req.account.status)}
+                                            </div>
+                                            <div className="text-sm text-slate-400 font-mono">SN: {req.account.serialNumber}</div>
+                                            <div className="text-xs text-slate-500 mt-1">
+                                                Demande par: {req.account.requester.toBase58().substring(0, 6)}...
+                                            </div>
                                         </div>
-                                        <div className="text-sm text-slate-400 font-mono">SN: {req.account.serialNumber}</div>
-                                        <div className="text-xs text-slate-500 mt-1">
-                                            Demande par: {req.account.requester.toBase58().substring(0, 6)}...
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-gold-500 font-bold">{getCertTypeLabel(req.account.certType)}</div>
+                                        <div className="text-xs text-slate-500 mt-1">Valeur est.: {req.account.estimatedValue.toString()} EUR</div>
+                                        <div className="text-xs text-slate-600 mt-1">
+                                            {new Date(req.account.createdAt.toNumber() * 1000).toLocaleDateString()}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-gold-500 font-bold">{getCertTypeLabel(req.account.certType)}</div>
-                                    <div className="text-xs text-slate-500 mt-1">Valeur est.: {req.account.estimatedValue.toString()} EUR</div>
+
+                                {/* Metadata Link */}
+                                <div className="mb-4 text-xs">
+                                    <a
+                                        href={req.account.metadataUri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                                    >
+                                        <Eye size={12} /> Voir Metadata JSON
+                                    </a>
                                 </div>
-                            </div>
 
-                            {/* Metadata Link */}
-                            <div className="mb-4 text-xs">
-                                <a
-                                    href={req.account.metadataUri.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
-                                >
-                                    <Eye size={12} /> Voir Metadata JSON
-                                </a>
-                            </div>
-
-                            {/* Actions */}
-                            {!!req.account.status.pending && (
-                                <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
-                                    {selectedRequest?.publicKey.toBase58() === req.publicKey.toBase58() ? (
-                                        <div className="w-full">
-                                            {actionType === 'approve' ? (
-                                                <div className="space-y-3">
-                                                    <p className="text-sm text-white">Confirmer l'approbation et l'emission du certificat ?</p>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleApprove(req)}
-                                                            disabled={!!processingId}
-                                                            className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2"
-                                                        >
-                                                            {processingId ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-                                                            Confirmer Emission
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setSelectedRequest(null); setActionType(null); }}
-                                                            className="bg-white/10 text-white py-2 px-4 rounded-lg text-sm"
-                                                        >
-                                                            Annuler
-                                                        </button>
+                                {/* Actions */}
+                                {!!req.account.status.pending && (
+                                    <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
+                                        {selectedRequest?.publicKey.toBase58() === req.publicKey.toBase58() ? (
+                                            <div className="w-full">
+                                                {actionType === 'approve' ? (
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm text-white">Confirmer l'approbation et l'emission du certificat ?</p>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleApprove(req)}
+                                                                disabled={!!processingId}
+                                                                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2"
+                                                            >
+                                                                {processingId ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
+                                                                Confirmer Emission
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setSelectedRequest(null); setActionType(null); }}
+                                                                className="bg-white/10 text-white py-2 px-4 rounded-lg text-sm"
+                                                            >
+                                                                Annuler
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    <p className="text-sm text-white">Motif du rejet (remboursement automatique):</p>
-                                                    <input
-                                                        type="text"
-                                                        value={rejectReason}
-                                                        onChange={(e) => setRejectReason(e.target.value)}
-                                                        placeholder="Ex: Photos floues, contrefaçon..."
-                                                        className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white"
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handleReject(req)}
-                                                            disabled={!!processingId || !rejectReason}
-                                                            className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                                                        >
-                                                            {processingId ? <Loader2 className="animate-spin" size={16} /> : <XCircle size={16} />}
-                                                            Rejeter la demande
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { setSelectedRequest(null); setActionType(null); }}
-                                                            className="bg-white/10 text-white py-2 px-4 rounded-lg text-sm"
-                                                        >
-                                                            Annuler
-                                                        </button>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm text-white">Motif du rejet (remboursement automatique):</p>
+                                                        <input
+                                                            type="text"
+                                                            value={rejectReason}
+                                                            onChange={(e) => setRejectReason(e.target.value)}
+                                                            placeholder="Ex: Photos floues, contrefaçon..."
+                                                            className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white"
+                                                        />
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleReject(req)}
+                                                                disabled={!!processingId || !rejectReason}
+                                                                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                                                            >
+                                                                {processingId ? <Loader2 className="animate-spin" size={16} /> : <XCircle size={16} />}
+                                                                Rejeter la demande
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setSelectedRequest(null); setActionType(null); }}
+                                                                className="bg-white/10 text-white py-2 px-4 rounded-lg text-sm"
+                                                            >
+                                                                Annuler
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <button
-                                                onClick={() => { setSelectedRequest(req); setActionType('approve'); }}
-                                                className="flex-1 bg-green-500/10 text-green-500 border border-green-500/20 py-2 rounded-lg text-sm font-medium hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <CheckCircle size={16} /> Approuver
-                                            </button>
-                                            <button
-                                                onClick={() => { setSelectedRequest(req); setActionType('reject'); setRejectReason(''); }}
-                                                className="flex-1 bg-red-500/10 text-red-500 border border-red-500/20 py-2 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <XCircle size={16} /> Rejeter
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            )}
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => { setSelectedRequest(req); setActionType('approve'); }}
+                                                    className="flex-1 bg-green-500/10 text-green-500 border border-green-500/20 py-2 rounded-lg text-sm font-medium hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <CheckCircle size={16} /> Approuver
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSelectedRequest(req); setActionType('reject'); setRejectReason(''); }}
+                                                    className="flex-1 bg-red-500/10 text-red-500 border border-red-500/20 py-2 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <XCircle size={16} /> Rejeter
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
 
-                            {req.account.status.rejected && (
-                                <div className="mt-4 pt-4 border-t border-white/10 text-sm text-red-400">
-                                    <span className="font-semibold">Raison du rejet :</span> {req.account.rejectionReason}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                {req.account.status.rejected && (
+                                    <div className="mt-4 pt-4 border-t border-white/10 text-sm text-red-400">
+                                        <span className="font-semibold">Raison du rejet :</span> {req.account.rejectionReason}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>
