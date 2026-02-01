@@ -44,7 +44,7 @@ export const UserCertificates = () => {
             setRequests(sortedRequests);
 
         } catch (error) {
-            console.error("Error fetching user data:", error);
+
         } finally {
             setLoading(false);
         }
@@ -125,7 +125,7 @@ export const UserCertificates = () => {
             }, 2000);
 
         } catch (error: any) {
-            console.error("Erreur transfert:", error);
+
 
             // Parse error message
             let errorMsg = "Erreur lors du transfert";

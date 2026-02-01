@@ -39,11 +39,11 @@ function App() {
                 const isAuth = certifiers.some(c => c.toString() === publicKey.toString()) ||
                     admin.toString() === publicKey.toString();
 
-                console.log("[DEBUG] Accès Dashboard autorisé ?", isAuth);
+
 
                 setIsCertifier(isAuth);
             } catch (e) {
-                console.error("Error checking certifier:", e);
+
                 setIsCertifier(false);
             }
         };

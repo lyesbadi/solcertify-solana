@@ -106,7 +106,7 @@ export const CertifierDashboard = () => {
 
             setRequests(sorted as unknown as CertificationRequest[]);
         } catch (error) {
-            console.error("Error fetching requests:", error);
+
         } finally {
             setLoading(false);
         }
@@ -152,7 +152,7 @@ export const CertifierDashboard = () => {
             }
             setCertifiers(profiles);
         } catch (err) {
-            console.error("Error fetching certifiers:", err);
+
         } finally {
             setLoadingCertifiers(false);
         }
@@ -205,7 +205,7 @@ export const CertifierDashboard = () => {
             setSelectedRequest(null);
             setActionType(null);
         } catch (error) {
-            console.error("Error approving:", error);
+
             alert("Erreur lors de l'approbation");
         } finally {
             setProcessingId(null);
@@ -248,7 +248,7 @@ export const CertifierDashboard = () => {
             setActionType(null);
             setRejectReason('');
         } catch (error) {
-            console.error("Error rejecting:", error);
+
             alert("Erreur lors du rejet");
         } finally {
             setProcessingId(null);

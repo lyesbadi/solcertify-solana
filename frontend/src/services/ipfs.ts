@@ -51,7 +51,7 @@ export async function checkIpfsHealth(): Promise<boolean> {
         const data = await response.json();
         return data.status === 'ok';
     } catch (error) {
-        console.error('IPFS service non disponible:', error);
+
         return false;
     }
 }

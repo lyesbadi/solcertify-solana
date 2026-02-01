@@ -155,7 +155,7 @@ export const RequestCertificationForm = () => {
                     });
                 }
             } catch (err) {
-                console.error("Error fetching certifiers:", err);
+
             } finally {
                 setLoadingCertifiers(false);
             }
@@ -304,7 +304,7 @@ export const RequestCertificationForm = () => {
             // For now keep as is.
 
         } catch (err: any) {
-            console.error('Erreur demande certification:', err);
+
             if (err.message?.includes('RequestAlreadyExists')) {
                 setError('Une demande existe deja pour ce numero de serie.');
             } else if (err.message?.includes('CertifierAtCapacity')) {

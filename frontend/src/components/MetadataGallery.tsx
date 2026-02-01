@@ -57,7 +57,7 @@ export const MetadataGallery = ({ uri, compact = true, size = 'md', className }:
 
                 setImages(allImages);
             } catch (e) {
-                console.error("Error loading metadata images", e);
+
             } finally {
                 setLoading(false);
             }

@@ -139,7 +139,7 @@ $env:ANCHOR_PROVIDER_URL="http://127.0.0.1:8899"; $env:ANCHOR_WALLET="C:\Users\c
 3. **Réception (Rôle Client)**
     * Reconnectez le wallet **Client**.
     * Allez dans "Mes Montres".
-    * 🎉 Le **Certificat Officiel** est là ! (Statut Transférable).
+    * Le **Certificat Officiel** est là ! (Statut Transférable).
     * Cliquez sur **"Historique"** pour voir la transaction sur l'Explorer Solana.
     * Cliquez sur **"Détails"** pour voir les métadonnées sur IPFS.
 

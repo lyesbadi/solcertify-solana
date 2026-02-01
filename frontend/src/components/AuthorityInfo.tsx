@@ -16,7 +16,7 @@ export const AuthorityInfo = () => {
                 const authorityAccount = await (program.account as any).certificationAuthority.fetch(authorityAddr);
                 setStats(authorityAccount);
             } catch (error) {
-                console.error("Error fetching authority stats:", error);
+
             } finally {
                 setLoading(false);
             }

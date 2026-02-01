@@ -22,7 +22,7 @@ export const VerifyWatch = () => {
             const certificate = await (program.account as any).certificate.fetch(pda);
             setResult(certificate);
         } catch (err: any) {
-            console.error("Verification error:", err);
+
             setError("Aucune montre certifiée trouvée avec ce numéro de série.");
         } finally {
             setLoading(false);
