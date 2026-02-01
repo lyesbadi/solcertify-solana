@@ -52,22 +52,22 @@ Le marche des montres de luxe est confronte a un probleme majeur : la contrefaco
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      FRONTEND                           │
-│  React 18 + TypeScript + Vite + TailwindCSS            │
-│  @solana/wallet-adapter (Phantom, Solflare)            │
+│  React 18 + TypeScript + Vite + TailwindCSS             │
+│  @solana/wallet-adapter (Phantom, Solflare)             │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
 │                    IPFS SERVICE                         │
-│  Node.js + Express + Pinata SDK                        │
-│  Stockage decentralise des metadonnees                 │
+│  Node.js + Express + Pinata SDK                         │
+│  Stockage decentralise des metadonnees                  │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
 │                  SOLANA BLOCKCHAIN                      │
-│  Programme Anchor (Rust)                               │
-│  PDAs pour certificats, profils, activite              │
+│  Programme Anchor (Rust)                                │
+│  PDAs pour certificats, profils, activite               │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -250,7 +250,7 @@ Plutot qu'une emission directe, nous avons implemente un **workflow de demande**
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Client    │────▶│   Demande   │────▶│ Certificat  │
+│   Client    │────▶│   Demande │────▶│ Certificat  │
 │  (Paiement) │     │  (Pending)  │     │  (Approuve) │
 └─────────────┘     └─────────────┘     └─────────────┘
                            │
@@ -505,21 +505,21 @@ cd frontend && npm run dev
 
 SolCertify repond a l'ensemble des contraintes du projet Web3 :
 
-| Contrainte | Implementation | Validation |
-|------------|----------------|------------|
-| Tokenisation multi-niveaux | 4 types de certification | ✅ |
-| Echanges de tokens | transfer_certificate | ✅ |
-| Limite de possession (4) | MAX_CERTIFICATES | ✅ |
-| Cooldown (5 min) | COOLDOWN_PERIOD | ✅ |
-| Lock temporaire (10 min) | LOCK_PERIOD | ✅ |
-| IPFS pour metadonnees | Pinata integration | ✅ |
-| Tests unitaires Anchor | 23 tests (100%) | ✅ |
+| Contrainte | Implementation |
+|------------|----------------|
+| Tokenisation multi-niveaux | 4 types de certification |
+| Echanges de tokens | transfer_certificate |
+| Limite de possession (4) | MAX_CERTIFICATES |
+| Cooldown (5 min) | COOLDOWN_PERIOD |
+| Lock temporaire (10 min) | LOCK_PERIOD |
+| IPFS pour metadonnees | Pinata integration |
+| Tests unitaires Anchor | 23 tests (100%) |
 
 Le projet propose une solution concrete a un probleme reel du marche des montres de luxe, en tirant parti des avantages de la blockchain Solana pour garantir transparence, immutabilite et tracabilite.
 
 ---
 
-**Auteurs :** lyesbadi, VictorP69, kyomawa
+**Auteurs :** Lyes Chougar, Victor Perez, Bryan Cellier
 
 **Repository :** <https://github.com/lyesbadi/solcertify-solana>
 
