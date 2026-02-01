@@ -1,19 +1,19 @@
 #!/bin/bash
-# SolCertify - Full Build, Setup & Test Script
-# Run this from the backend directory
+# SolCertify - Pipeline Complet de Build & Test
+# Exécutez ceci depuis le dossier backend
 
-set -e # Exit on error
+set -e # Arrêt en cas d'erreur
 
 echo "============================================"
-echo "  SolCertify - Full Build & Test Pipeline  "
+echo "  SolCertify - Pipeline Complet de Build  "
 echo "============================================"
 
-# Function to start validator
+# Fonction pour démarrer le validateur
 start_validator() {
-    echo "Starting fresh validator..."
+    echo "Démarrage d'un validateur frais..."
     rm -rf test-ledger
     
-    # Start validator in background or new terminal
+    # Démarrer le validateur en arrière-plan ou nouveau terminal
     if command -v gnome-terminal &> /dev/null; then
         gnome-terminal -- bash -c "cd $(pwd) && solana-test-validator; exec bash" &
     elif command -v xterm &> /dev/null; then
@@ -24,18 +24,18 @@ start_validator() {
         solana-test-validator &
     fi
     
-    echo "Waiting 10 seconds for validator to start..."
+    echo "Attente de 10 secondes pour le démarrage du validateur..."
     sleep 10
 }
 
-# Function to stop validator
+# Fonction pour arrêter le validateur
 stop_validator() {
-    echo "Stopping validator..."
+    echo "Arrêt du validateur..."
     pkill -f solana-test-validator || true
     sleep 2
 }
 
-# Set environment variables
+# Configurer l'URL du provider
 export ANCHOR_PROVIDER_URL="http://127.0.0.1:8899"
 
 # ============================================
@@ -44,81 +44,81 @@ export ANCHOR_PROVIDER_URL="http://127.0.0.1:8899"
 echo ""
 echo "========== PHASE 1: BUILD & TEST =========="
 
-# Step 1: Start fresh validator for tests
+# Étape 1: Démarrer un validateur propre
 echo ""
-echo "[1/10] Starting fresh validator for tests..."
+echo "[1/10] Démarrage du validateur pour les tests..."
 stop_validator
 start_validator
 
-# Step 2: Build the Solana program
+# Étape 2: Compiler le programme Solana
 echo ""
-echo "[2/10] Building Solana program..."
+echo "[2/10] Compilation du programme Solana..."
 cargo build-bpf --manifest-path programs/solcertify/Cargo.toml
-echo "Build successful!"
+echo "Compilation réussie !"
 
-# Step 3: Deploy to local validator
+# Étape 3: Déployer sur le validateur local
 echo ""
-echo "[3/10] Deploying to local validator..."
+echo "[3/10] Déploiement sur le validateur local..."
 anchor deploy
-echo "Deploy successful!"
+echo "Déploiement réussi !"
 
-# Step 4: Sync IDL to frontend
+# Étape 4: Synchroniser l'IDL vers le frontend
 echo ""
-echo "[4/10] Syncing IDL to frontend..."
+echo "[4/10] Synchronisation de l'IDL vers le frontend..."
 cp target/idl/solcertify.json ../frontend/src/idl/solcertify.json
-echo "IDL synced!"
+echo "IDL synchronisé !"
 
-# Step 5: Generate keypairs from .env
+# Étape 5: Générer les paires de clés depuis .env
 echo ""
-echo "[5/10] Generating keypairs from .env..."
+echo "[5/10] Génération des clés depuis .env..."
 npx ts-node scripts/generate_keypairs.ts
-echo "Keypairs ready!"
+echo "Clés prêtes !"
 
-# Step 6: Compile and run tests
+# Étape 6: Compiler et exécuter les tests
 echo ""
-echo "[6/10] Compiling and running tests..."
+echo "[6/10] Compilation et exécution des tests..."
 npx tsc tests/solcertify.ts --outDir tests_js --target es2020 --module commonjs --skipLibCheck --esModuleInterop
 
 export ANCHOR_WALLET="$HOME/.config/solana/id.json"
 npx mocha tests_js/solcertify.js --timeout 1000000
 
 echo ""
-echo "Tests complete!"
+echo "Tests terminés !"
 
 # ============================================
-# PHASE 2: Setup for Frontend
+# PHASE 2: Configuration pour le Frontend
 # ============================================
 echo ""
-echo "========== PHASE 2: FRONTEND SETUP =========="
+echo "========== PHASE 2: CONFIGURATION FRONTEND =========="
 
-# Step 7: Reset validator for clean frontend state
+# Étape 7: Réinitialiser le validateur pour avoir un état propre
 echo ""
-echo "[7/10] Resetting validator for frontend..."
+echo "[7/10] Réinitialisation du validateur pour le frontend..."
 stop_validator
 start_validator
 
-# Step 8: Redeploy program
+# Étape 8: Redéployer le programme
 echo ""
-echo "[8/10] Redeploying program..."
+echo "[8/10] Redéploiement du programme..."
 anchor deploy
-echo "Deploy successful!"
+echo "Déploiement réussi !"
 
-# Step 9: Run setup_dev (initialize with YOUR keys)
+# Étape 9: Exécuter setup_dev (initialiser avec VOS clés)
 echo ""
-echo "[9/10] Running setup_dev.ts..."
+echo "[9/10] Exécution de setup_dev.ts..."
 export ANCHOR_WALLET="tests/keypairs/admin.json"
 npx ts-node scripts/setup_dev.ts
-echo "Setup complete!"
+echo "Configuration terminée !"
 
-# Step 10: Fund wallets
+# Étape 10: Financer les wallets
 echo ""
-echo "[10/10] Checking and funding wallets..."
+echo "[10/10] Vérification et financement des wallets..."
 npx ts-node scripts/check_balances.ts
-echo "Wallets funded!"
+echo "Wallets financés !"
 
 echo ""
 echo "============================================"
-echo "  Pipeline Complete!                        "
-echo "  Validator is running with your wallets.   "
-echo "  Frontend ready at http://localhost:5173   "
+echo "  Pipeline Terminé !                        "
+echo "  Le validateur tourne avec vos wallets.    "
+echo "  Frontend prêt sur http://localhost:5173   "
 echo "============================================"

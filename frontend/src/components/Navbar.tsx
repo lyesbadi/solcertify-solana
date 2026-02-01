@@ -47,15 +47,7 @@ export const Navbar = ({ activeTab, onTabChange }: NavbarProps) => {
                     >
                         Mes Montres
                     </button>
-                    <button
-                        onClick={() => onTabChange('admin')}
-                        className={clsx(
-                            "transition-colors hover:text-gold-400",
-                            activeTab === 'admin' ? "text-gold-500" : "text-slate-400"
-                        )}
-                    >
-                        Certificateurs
-                    </button>
+
 
                     <div className="h-6 w-px bg-white/10 mx-2" />
 

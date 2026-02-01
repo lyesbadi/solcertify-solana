@@ -8,7 +8,10 @@ import {
     Clock,
     Loader2,
     Eye,
-    Award
+    Award,
+    UserCheck,
+    MapPin,
+    Activity
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BN } from '@coral-xyz/anchor';
@@ -32,6 +35,15 @@ interface CertificationRequest {
     };
 }
 
+interface CertifierInfo {
+    publicKey: PublicKey;
+    displayName: string;
+    physicalAddress: string;
+    currentLoad: number;
+    totalProcessed: number;
+    isActive: boolean;
+}
+
 import { MetadataGallery } from './MetadataGallery';
 
 export const CertifierDashboard = () => {
@@ -42,6 +54,10 @@ export const CertifierDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [filter, setFilter] = useState<'all' | 'pending' | 'history'>('pending');
+
+    // Certifiers List
+    const [certifiers, setCertifiers] = useState<CertifierInfo[]>([]);
+    const [loadingCertifiers, setLoadingCertifiers] = useState(true);
 
     // Approval/Rejection Modal State
     const [selectedRequest, setSelectedRequest] = useState<CertificationRequest | null>(null);
@@ -96,8 +112,55 @@ export const CertifierDashboard = () => {
         }
     };
 
+
+
+    const fetchCertifiers = async () => {
+        if (!program) return;
+        setLoadingCertifiers(true);
+        try {
+            const [authorityPda] = getAuthorityPda();
+            const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
+
+            // Get list of authorized pubkeys
+            const approvedKeys = authority.approvedCertifiers as PublicKey[];
+
+            // Fetch profiles for each
+            const profiles: CertifierInfo[] = [];
+            for (const key of approvedKeys) {
+                const [profilePda] = getCertifierProfilePda(key);
+                try {
+                    const profile = await (program.account as any).certifierProfile.fetch(profilePda);
+                    profiles.push({
+                        publicKey: key,
+                        displayName: profile.displayName,
+                        physicalAddress: profile.physicalAddress,
+                        currentLoad: profile.currentLoad,
+                        totalProcessed: profile.totalProcessed.toNumber(),
+                        isActive: profile.isActive
+                    });
+                } catch (e) {
+                    // Fallback
+                    profiles.push({
+                        publicKey: key,
+                        displayName: `Certif. ${key.toString().slice(0, 4)}`,
+                        physicalAddress: "N/A",
+                        currentLoad: 0,
+                        totalProcessed: 0,
+                        isActive: true // Assume active if in authority list but profile missing (edge case)
+                    });
+                }
+            }
+            setCertifiers(profiles);
+        } catch (err) {
+            console.error("Error fetching certifiers:", err);
+        } finally {
+            setLoadingCertifiers(false);
+        }
+    };
+
     useEffect(() => {
         fetchRequests();
+        fetchCertifiers();
     }, [program, publicKey]);
 
     const handleApprove = async (request: CertificationRequest) => {
@@ -123,7 +186,7 @@ export const CertifierDashboard = () => {
             const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
             const treasuryPubkey = authority.treasury;
 
-            const tx = await (program.methods as any)
+            await (program.methods as any)
                 .approveCertification()
                 .accounts({
                     certifier: publicKey,
@@ -137,7 +200,7 @@ export const CertifierDashboard = () => {
                 })
                 .rpc();
 
-            console.log("Approved signature:", tx);
+
             await fetchRequests();
             setSelectedRequest(null);
             setActionType(null);
@@ -162,7 +225,11 @@ export const CertifierDashboard = () => {
 
             const [certifierProfilePda] = getCertifierProfilePda(publicKey);
 
-            const tx = await (program.methods as any)
+            // Fetch authority to get treasury
+            const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
+            const treasuryPubkey = authority.treasury;
+
+            await (program.methods as any)
                 .rejectCertification(rejectReason)
                 .accounts({
                     certifier: publicKey,
@@ -170,11 +237,12 @@ export const CertifierDashboard = () => {
                     request: request.publicKey,
                     requester: request.account.requester,
                     authority: authorityPda,
+                    treasury: treasuryPubkey,
                     systemProgram: SystemProgram.programId
                 })
                 .rpc();
 
-            console.log("Rejected signature:", tx);
+
             await fetchRequests();
             setSelectedRequest(null);
             setActionType(null);
@@ -236,12 +304,7 @@ export const CertifierDashboard = () => {
                     >
                         Historique
                     </button>
-                    <button
-                        onClick={fetchRequests}
-                        className="p-2 bg-white/5 rounded-lg text-slate-400 hover:text-white"
-                    >
-                        <Clock size={20} />
-                    </button>
+
                 </div>
             </div>
 
@@ -255,7 +318,7 @@ export const CertifierDashboard = () => {
                     <div className="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Award className="text-slate-600" size={32} />
                     </div>
-                    <p className="text-slate-400">Aucune demande trouvée</p>
+                    <p className="text-slate-400">Aucune demande en attente</p>
                 </div>
             ) : (
                 <div className="grid gap-4">
@@ -392,6 +455,80 @@ export const CertifierDashboard = () => {
                     })}
                 </div>
             )}
+
+            {/* Certifiers List Section */}
+            <div className="mt-12 border-t border-white/10 pt-8">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-6">
+                    <UserCheck className="text-gold-500" size={20} />
+                    Liste des Certificateurs Agréés ({certifiers.length})
+                </h3>
+
+                {loadingCertifiers ? (
+                    <div className="text-center py-8">
+                        <Loader2 className="animate-spin mx-auto text-slate-500" size={24} />
+                    </div>
+                ) : certifiers.length === 0 ? (
+                    <div className="text-slate-500 text-sm text-center py-6 bg-white/5 rounded-lg border border-dashed border-white/10">
+                        Aucun certificateur trouvé via l'autorité.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {certifiers.map((cert) => (
+                            <div
+                                key={cert.publicKey.toString()}
+                                className="bg-white/5 border border-white/10 rounded-xl p-5 hover:bg-white/10 transition-colors"
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 className="font-bold text-white text-base">{cert.displayName}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className={clsx(
+                                                "w-2 h-2 rounded-full",
+                                                cert.isActive ? "bg-green-500" : "bg-red-500"
+                                            )} />
+                                            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+                                                {cert.isActive ? "Actif" : "Inactif"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] text-slate-500 uppercase flex items-center justify-end gap-1">
+                                            <Activity size={10} /> Traités
+                                        </div>
+                                        <div className="text-blue-400 font-mono font-bold text-lg leading-tight">
+                                            {cert.totalProcessed}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 pt-3 border-t border-white/5">
+                                    <div className="flex items-start gap-2 text-sm text-slate-400">
+                                        <MapPin className="text-slate-600 shrink-0 mt-0.5" size={14} />
+                                        <span className="text-xs line-clamp-2">{cert.physicalAddress}</span>
+                                    </div>
+
+                                    <div className="bg-black/20 rounded-lg p-2 flex items-center justify-between text-xs">
+                                        <span className="text-slate-500">Charge actuelle (Load)</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div
+                                                    className={clsx("h-full rounded-full transition-all", cert.currentLoad > 8 ? "bg-red-500" : "bg-green-500")}
+                                                    style={{ width: `${Math.min((cert.currentLoad / 10) * 100, 100)}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-white font-mono">{cert.currentLoad}/10</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-[10px] text-slate-600 font-mono break-all pt-1">
+                                        Addr: {cert.publicKey.toString().slice(0, 12)}...{cert.publicKey.toString().slice(-4)}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

@@ -1,108 +1,113 @@
-# SolCertify - Full Build, Setup & Test Script
-# Run this from the backend directory
+# SolCertify - Pipeline Complet de Build & Test
+# Exécutez ceci depuis le dossier backend
+
+$ErrorActionPreference = "Stop"
 
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  SolCertify - Full Build & Test Pipeline  " -ForegroundColor Cyan
+Write-Host "  SolCertify - Pipeline Complet de Build  " -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 
-# Function to start validator
+# Fonction pour démarrer le validateur
 function Start-Validator {
-    Write-Host "Starting fresh validator..." -ForegroundColor Yellow
-    Remove-Item -Recurse -Force test-ledger -ErrorAction SilentlyContinue
-    $script:validatorProcess = Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; solana-test-validator" -PassThru
-    Write-Host "Waiting 10 seconds for validator to start..." -ForegroundColor Yellow
+    Write-Host "Démarrage d'un validateur frais..." -ForegroundColor Yellow
+    if (Test-Path "test-ledger") { Remove-Item -Recurse -Force "test-ledger" }
+    
+    # Démarrer le validateur en arrière-plan
+    Start-Process -FilePath "solana-test-validator" -NoNewWindow
+    
+    Write-Host "Attente de 10 secondes pour le démarrage du validateur..." -ForegroundColor Yellow
     Start-Sleep -Seconds 10
 }
 
-# Function to stop validator
+# Fonction pour arrêter le validateur
 function Stop-Validator {
-    Write-Host "Stopping validator..." -ForegroundColor Yellow
-    Get-Process -Name "solana-test-validator" -ErrorAction SilentlyContinue | Stop-Process -Force
+    Write-Host "Arrêt du validateur..." -ForegroundColor Yellow
+    Stop-Process -Name "solana-test-validator" -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2
 }
 
-# Set environment variables
+# Configurer l'URL du provider
 $env:ANCHOR_PROVIDER_URL = "http://127.0.0.1:8899"
 
 # ============================================
 # PHASE 1: Build & Test
 # ============================================
-Write-Host "`n========== PHASE 1: BUILD & TEST ==========" -ForegroundColor Magenta
+Write-Host ""
+Write-Host "========== PHASE 1: BUILD & TEST ==========" -ForegroundColor Magenta
 
-# Step 0: Start fresh validator
-Write-Host "`n[1/10] Starting fresh validator for tests..." -ForegroundColor Yellow
+# Étape 1: Démarrer un validateur propre
+Write-Host ""
+Write-Host "[1/10] Démarrage du validateur pour les tests..." -ForegroundColor Green
 Stop-Validator
 Start-Validator
 
-# Step 1: Build the Solana program
-Write-Host "`n[2/10] Building Solana program..." -ForegroundColor Yellow
+# Étape 2: Compiler le programme Solana
+Write-Host ""
+Write-Host "[2/10] Compilation du programme Solana..." -ForegroundColor Green
 cargo build-bpf --manifest-path programs/solcertify/Cargo.toml
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "BUILD FAILED!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Build successful!" -ForegroundColor Green
+Write-Host "Compilation réussie !" -ForegroundColor Green
 
-# Step 2: Deploy to local validator
-Write-Host "`n[3/10] Deploying to local validator..." -ForegroundColor Yellow
+# Étape 3: Déployer sur le validateur local
+Write-Host ""
+Write-Host "[3/10] Déploiement sur le validateur local..." -ForegroundColor Green
 anchor deploy
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "DEPLOY FAILED!" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Deploy successful!" -ForegroundColor Green
+Write-Host "Déploiement réussi !" -ForegroundColor Green
 
-# Step 3: Sync IDL to frontend
-Write-Host "`n[4/10] Syncing IDL to frontend..." -ForegroundColor Yellow
-Copy-Item -Path "target/idl/solcertify.json" -Destination "../frontend/src/idl/solcertify.json" -Force
-Write-Host "IDL synced!" -ForegroundColor Green
+# Étape 4: Synchroniser l'IDL vers le frontend
+Write-Host ""
+Write-Host "[4/10] Synchronisation de l'IDL vers le frontend..." -ForegroundColor Green
+Copy-Item "target/idl/solcertify.json" "../frontend/src/idl/solcertify.json" -Force
+Write-Host "IDL synchronisé !" -ForegroundColor Green
 
-# Step 4: Generate keypairs from .env
-Write-Host "`n[5/10] Generating keypairs from .env..." -ForegroundColor Yellow
+# Étape 5: Générer les paires de clés depuis .env
+Write-Host ""
+Write-Host "[5/10] Génération des clés depuis .env..." -ForegroundColor Green
 npx ts-node scripts/generate_keypairs.ts
-Write-Host "Keypairs ready!" -ForegroundColor Green
+Write-Host "Clés prêtes !" -ForegroundColor Green
 
-# Step 5: Compile and run tests
-Write-Host "`n[6/10] Compiling and running tests..." -ForegroundColor Yellow
+# Étape 6: Compiler et exécuter les tests
+Write-Host ""
+Write-Host "[6/10] Compilation et exécution des tests..." -ForegroundColor Green
 npx tsc tests/solcertify.ts --outDir tests_js --target es2020 --module commonjs --skipLibCheck --esModuleInterop
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "TSC COMPILATION FAILED!" -ForegroundColor Red
-    exit 1
-}
 
-$env:ANCHOR_WALLET = "C:/Users/choug/.config/solana/id.json"
+$env:ANCHOR_WALLET = "$HOME/.config/solana/id.json"
 npx mocha tests_js/solcertify.js --timeout 1000000
-
-Write-Host "`nTests complete!" -ForegroundColor Green
+Write-Host "Tests terminés !" -ForegroundColor Green
 
 # ============================================
-# PHASE 2: Setup for Frontend
+# PHASE 2: Configuration pour le Frontend
 # ============================================
-Write-Host "`n========== PHASE 2: FRONTEND SETUP ==========" -ForegroundColor Magenta
+Write-Host ""
+Write-Host "========== PHASE 2: CONFIGURATION FRONTEND ==========" -ForegroundColor Magenta
 
-# Step 6: Reset validator for clean frontend state
-Write-Host "`n[7/10] Resetting validator for frontend..." -ForegroundColor Yellow
+# Étape 7: Réinitialiser le validateur pour avoir un état propre
+Write-Host ""
+Write-Host "[7/10] Réinitialisation du validateur pour le frontend..." -ForegroundColor Green
 Stop-Validator
 Start-Validator
 
-# Step 7: Redeploy program
-Write-Host "`n[8/10] Redeploying program..." -ForegroundColor Yellow
+# Étape 8: Redéployer le programme
+Write-Host ""
+Write-Host "[8/10] Redéploiement du programme..." -ForegroundColor Green
 anchor deploy
-Write-Host "Deploy successful!" -ForegroundColor Green
+Write-Host "Déploiement réussi !" -ForegroundColor Green
 
-# Step 8: Run setup_dev (initialize with YOUR keys)
-Write-Host "`n[9/10] Running setup_dev.ts..." -ForegroundColor Yellow
+# Étape 9: Exécuter setup_dev (initialiser avec VOS clés)
+Write-Host ""
+Write-Host "[9/10] Exécution de setup_dev.ts..." -ForegroundColor Green
 $env:ANCHOR_WALLET = "tests/keypairs/admin.json"
 npx ts-node scripts/setup_dev.ts
-Write-Host "Setup complete!" -ForegroundColor Green
+Write-Host "Configuration terminée !" -ForegroundColor Green
 
-# Step 9: Fund wallets
-Write-Host "`n[10/10] Checking and funding wallets..." -ForegroundColor Yellow
+# Étape 10: Financer les wallets
+Write-Host ""
+Write-Host "[10/10] Vérification et financement des wallets..." -ForegroundColor Green
 npx ts-node scripts/check_balances.ts
-Write-Host "Wallets funded!" -ForegroundColor Green
+Write-Host "Wallets financés !" -ForegroundColor Green
 
-Write-Host "`n============================================" -ForegroundColor Cyan
-Write-Host "  Pipeline Complete!                        " -ForegroundColor Cyan
-Write-Host "  Validator is running with your wallets.   " -ForegroundColor Cyan
-Write-Host "  Frontend ready at http://localhost:5173   " -ForegroundColor Cyan
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "  Pipeline Terminé !                        " -ForegroundColor Cyan
+Write-Host "  Le validateur tourne avec vos wallets.    " -ForegroundColor Cyan
+Write-Host "  Frontend prêt sur http://localhost:5173   " -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan

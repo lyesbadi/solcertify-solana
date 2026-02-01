@@ -29,15 +29,11 @@ function App() {
                 const [authorityPda] = getAuthorityPda();
                 const authority = await (program.account as any).certificationAuthority.fetch(authorityPda);
 
-                console.log("[DEBUG] Objet Authority COMPLET:", authority);
+
 
                 const certifiersRaw = authority.approvedCertifiers || authority.certifiers || [];
                 const certifiers = certifiersRaw as PublicKey[];
                 const admin = authority.admin as PublicKey;
-
-                console.log("[DEBUG] Certificateurs autorisés:", certifiers.map(c => c.toString()));
-                console.log("[DEBUG] Admin:", admin.toString());
-                console.log("[DEBUG] Ton Wallet:", publicKey.toString());
 
                 // Allow if user is an approved certifier OR the global admin
                 const isAuth = certifiers.some(c => c.toString() === publicKey.toString()) ||

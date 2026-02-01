@@ -15,8 +15,9 @@ frontend/
 │   │   ├── Navbar.tsx           # Navigation + wallet button
 │   │   ├── AuthorityInfo.tsx    # Statistiques globales
 │   │   ├── VerifyWatch.tsx      # Verification d'authenticite
-│   │   ├── UserCertificates.tsx # Collection personnelle
-│   │   └── IssueCertificateForm.tsx # Emission (certificateurs)
+│   │   ├── UserCertificates.tsx # Collection personnelle + Liens Explorer/IPFS
+│   │   ├── RequestCertificationForm.tsx # Formulaire client (avec choix expert)
+│   │   └── CertifierDashboard.tsx # Espace expert (validation + liste experts)
 │   ├── hooks/
 │   │   └── useSolCertify.ts     # Hook d'interaction Anchor
 │   ├── idl/
@@ -69,7 +70,14 @@ VITE_IPFS_API_URL=http://localhost:3001
 
 - Verification publique par numero de serie
 - Affichage des certificats personnels
-- Formulaire d'emission pour certificateurs
+  - Lien vers l'Explorer Solana (Historique)
+  - Lien vers IPFS Gateway (Details JSON)
+- Formulaire d'emission pour clients
+  - Upload de photos sur IPFS
+  - Selection du certificateur (expert)
+- Tableau de bord Certificateur
+  - Validation/Rejet des demandes
+  - Liste publique des certificateurs agréés
 - Statistiques globales du registre
 - Design Luxury (theme sombre + accents dores)
 - Integration wallet Phantom/Solflare

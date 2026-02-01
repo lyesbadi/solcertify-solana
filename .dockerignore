@@ -1,38 +1,35 @@
-# Node modules
-node_modules/
-app/node_modules/
-
-# Build artifacts
-target/
-deploy/
-.anchor/
-dist/
-.vite/
-
-# Ledger data
-test-ledger/
-.config/
-
-# Git
-.git/
+# Version Control
+.git
 .gitignore
 
-# IDE
-.vscode/
-.idea/
+# Dependencies
+**/node_modules
+**/target
+**/dist
+**/build
 
-# Logs
-*.log
-
-# Environment
+# Environment Variables
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
+# IDEs
+.vscode
+.idea
 *.swp
 *.swo
-*~
+
+# Project specific
+tmp/
+test-ledger/
+
+# Docker
+docker-compose.yml
+DOCKER.md
+*.md
+
+# Exclude other services not needed for backend build
+frontend/
+ipfs-service/

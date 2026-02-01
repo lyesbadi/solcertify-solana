@@ -103,7 +103,7 @@ export const UserCertificates = () => {
             );
 
             // Execute transfer
-            const tx = await program.methods
+            await program.methods
                 .transferCertificate()
                 .accounts({
                     from: wallet.publicKey,
@@ -115,7 +115,7 @@ export const UserCertificates = () => {
                 })
                 .rpc();
 
-            console.log("Transfert réussi:", tx);
+
             setTransferSuccess(true);
 
             // Refresh data after 2 seconds
@@ -258,12 +258,22 @@ export const UserCertificates = () => {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <button className="flex-1 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <a
+                                                href={`https://explorer.solana.com/address/${cert.publicKey.toString()}?cluster=custom&customUrl=http://localhost:8899`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
                                                 <History size={14} /> Historique
-                                            </button>
-                                            <button className="flex-1 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            </a>
+                                            <a
+                                                href={data.metadataUri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/")}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-1 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
                                                 <ExternalLink size={14} /> Détails
-                                            </button>
+                                            </a>
                                         </div>
 
                                         {!isLocked && (

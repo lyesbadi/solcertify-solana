@@ -2,24 +2,40 @@
 
 Plateforme de certification d'authenticité pour montres de luxe sur la blockchain Solana.
 
-## Statut du Projet
+---
 
-| Phase | Description | Statut |
-| :--- | :--- | :--- |
-| Phase 1 | Restructuration | Complet |
-| Phase 2 | Smart Contract | Complet |
-| Phase 3 | Tests Backend | 23/23 passants |
-| Phase 4 | Service IPFS | Complet |
-| Phase 5 | Frontend React | Complet (Dashboard & Request Form) |
-| Phase 6 | Docker | A venir |
+## Lancement Automatique (Recommandé)
+
+Le projet inclut un script d'automatisation permettant de configurer l'ensemble de l'environnement (Validateur, Déploiement, IPFS, Frontend) via une commande unique.
+
+### Sur Windows (PowerShell)
+
+```powershell
+./start_all.ps1
+```
+
+### Sur Linux / Mac
+
+```bash
+chmod +x start_all.sh
+./start_all.sh
+```
+
+L'exécution ouvrira automatiquement 3 terminaux distincts :
+
+1. **Backend Pipeline** : Configuration de la blockchain locale et déploiement du programme.
+2. **IPFS Service** : Démarrage du serveur de stockage.
+3. **Frontend** : Lancement de l'application (<http://localhost:5173>).
+
+*Veuillez attendre l'ouverture du Frontend pour débuter.*
 
 ---
 
-## Guide de Démarrage Rapide (Démo)
+## Installation Manuelle
 
-Suivez ces étapes pour lancer et tester le projet complet en local.
+Si vous préférez lancer chaque service séparément pour des besoins de débogage :
 
-### 1. Lancer l'environnement
+### 1. Lancement de l'environnement
 
 Ouvrez plusieurs terminaux :
 
@@ -116,7 +132,7 @@ $env:ANCHOR_PROVIDER_URL="http://127.0.0.1:8899"; $env:ANCHOR_WALLET="C:\Users\c
 2. **Approbation (Rôle Certificateur)**
     * Connectez le wallet **Certificateur**.
     * L'onglet devient **"Espace Certificateur"** (au lieu de Demander).
-    * Vous voyez la demande dans le Dashboard.
+    * Vous voyez la demande dans le Dashboard ainsi que la **liste de tous les certificateurs agréés**.
     * Cliquez sur **"Approuver"**.
     * Validez la transaction.
 
@@ -124,7 +140,8 @@ $env:ANCHOR_PROVIDER_URL="http://127.0.0.1:8899"; $env:ANCHOR_WALLET="C:\Users\c
     * Reconnectez le wallet **Client**.
     * Allez dans "Mes Montres".
     * 🎉 Le **Certificat Officiel** est là ! (Statut Transférable).
-    * La demande "En attente" a disparu ou est passée en résolu.
+    * Cliquez sur **"Historique"** pour voir la transaction sur l'Explorer Solana.
+    * Cliquez sur **"Détails"** pour voir les métadonnées sur IPFS.
 
 ---
 

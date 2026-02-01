@@ -2,10 +2,6 @@
 
 Smart Contract pour la certification d'authenticité de montres de luxe sur Solana, construit avec Anchor Framework.
 
-## État du Projet
-
-**Phase 4 Terminée** : Backend complet avec système de demandes de certification, gestion des certificateurs, et scripts de déploiement automatisés.
-
 ## Pré-requis Système
 
 | Composant | Version Recommandée |
@@ -60,13 +56,6 @@ cd backend
 chmod +x scripts/full_pipeline.sh
 ./scripts/full_pipeline.sh
 ```
-
-**Ce que fait le pipeline :**
-
-| Phase | Étape | Description |
-|-------|-------|-------------|
-| **PHASE 1** | 1-6 | Build, Deploy, Tests sur validateur propre |
-| **PHASE 2** | 7-10 | Reset validateur, Setup avec VOS wallets, Fund |
 
 ### Scripts Individuels
 
